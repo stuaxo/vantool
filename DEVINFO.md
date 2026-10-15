@@ -216,9 +216,6 @@ with `sudo apt install ./vantool_1.0_amd64.deb` to fetch them.
 The `.deb` is built on GitHub's current Ubuntu runner, so it needs a system with that glibc version or
 newer.
 
-The FreeDOS package's `Copying-policy` says "Not yet specified" until a licence is chosen. Set
-`COPYING_POLICY` when running `tools/package.sh freedos` to change it.
-
 To build the same packages locally, build the programs, then run `tools/package.sh dos VERSION` or
 `tools/package.sh freedos VERSION`, `tools/package.sh linux VERSION`, `tools/package.sh deb VERSION` or `tools/package.sh win64 VERSION`. The `.deb` needs `dpkg-dev`.
 Packages are written to `dist`.

@@ -245,3 +245,8 @@ In VESA `vanplay` will use 1, 2 or 3 screen pages depending on how much memory t
 If there is only 1 page then screen tearing will occur.
 
 For 320x200 animations `vanplay` will use mode 13h (classic VGA 320x200) with buffering when there is space.
+
+
+## Licence
+
+BSD 2-Clause. See [LICENSE](LICENSE).

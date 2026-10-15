@@ -47,7 +47,7 @@ Author:         Stuart Axon
 Maintained-by:  Stuart Axon
 Primary-site:   https://github.com/stuaxo/vantool
 Platforms:      DOS, FreeDOS
-Copying-policy: ${COPYING_POLICY:-Not yet specified}
+Copying-policy: ${COPYING_POLICY:-BSD 2-Clause License}
 End
 LSM
     OUT="$PWD/dist/vantool-$VER-freedos.zip"
