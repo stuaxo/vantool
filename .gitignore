@@ -1,0 +1,14 @@
+# build output
+*.o
+*.obj
+*.err
+src/vantool
+src/vanplay
+src/*.EXE
+src/*.exe
+# python
+__pycache__/
+# VistaPro files are not part of this repository
+vistapro/
+*.VAN
+*.van

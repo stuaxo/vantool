@@ -1,0 +1,151 @@
+## Dev info
+
+Some info on display, performance and testing.
+
+
+### VESA details
+
+`vanplay`:
+
+- uses 8-bit modes that the card reports as supported
+- writes through window A, or window B on cards where only window B can be written to
+- follows the card's bank size, line length and number of pages
+- switches banks only when it needs to, by calling the card's bank-switch routine directly rather than
+  through `INT 10h`
+- copies to video memory 32 bits at a time
+- copies cached frames from extended memory directly to video memory, without a copy in conventional memory
+- sets the palette through the VGA ports, or through VESA function `4F09` if the card says its palette
+  hardware is not VGA-compatible
+
+To allow direct copies, the cache stores rows top to bottom. Files with rows stored bottom to top are
+reordered as they are read ahead, not when the frame is shown.
+
+The window B and `4F09` routes have not been tested, because the emulator used for testing does not need
+them.
+
+## Performance
+
+All figures were measured in emulators. They show relative improvements. They do not predict speed on
+real hardware.
+
+### vanplay
+
+Measured in dosbox-x set to about the speed of a 386DX-33 (`cycles=fixed 8000`).
+
+| Test | Before VESA changes | After |
+|---|---|---|
+| Drawing only, 640 by 480 | 25.7 fps | 36.4 fps |
+| Drawing only, 1280 by 1024 | 7.3 fps | 12.1 fps |
+| From cache, 640 by 480 | 24 fps | 109 fps |
+| From cache, 1280 by 1024, 3 pages | 7.8 fps | 54.5 fps |
+
+The first time through a file, speed is limited by the disk, and did not change.
+
+dosbox-x does not account for the time taken by extended memory copies or by the video card's bus. The
+figures for playing from the cache are therefore higher than a real 386 would reach.
+
+dosbox-x's default video card has only one page at 1280 by 1024. The 3-page figure used `vmemsize=4`.
+
+### Low memory
+
+Playback was checked at 15 fps, 640 by 480, with conventional and extended memory reduced. It kept the full
+frame rate in every case.
+
+- With 1 MB, 3 MB and no extended memory, the cache held 1, 8 and 0 of 12 frames.
+- With no free conventional memory, the reading block dropped to 4 KB. The first time through, 8 frames
+  were late, and the overall rate was 15.3 fps.
+
+### vantool
+
+Measured in dosemu2 with `pic.van`, which has 193 frames of 1280 by 1024 pixels (253 MB). Output was
+identical before and after.
+
+| Task | Before I/O changes | After |
+|---|---|---|
+| `slice` the whole file | 12.72 s | 0.35 s |
+| `extract` 24 frames as BMP | 1.05 s | 0.10 s |
+| `make` from 24 BMP images | 1.60 s | 0.10 s |
+| `extract` 24 frames as PCX | 1.65 s | 0.60 s |
+| `make` from 24 PCX images | 1.70 s | 0.90 s |
+
+`vantool` reads and writes rows in the order they are stored where it can. Other access goes through a
+block cache.
+
+## Testing
+
+Run:
+
+```
+python3 tools/test_vantool.py
+python3 tools/test_vanplay.py
+```
+
+Build both the Linux and DOS programs first.
+
+Use `--no-dos` to skip the DOS tests. `test_vanplay.py` also accepts `--no-sdl` to skip the Linux tests.
+
+The tests need Python 3. The DOS tests also need:
+
+- dosemu2, for `test_vantool.py`
+- dosbox-x, Xvfb, xdotool and xwd, for `test_vanplay.py`
+
+VistaPro itself is not included. Some tests use files from VistaPro 3.20. To run them, set `VISTAPRO` to
+the directory that holds VistaPro:
+
+```
+VISTAPRO=/path/to/vistapro python3 tools/test_vantool.py
+```
+
+Without it, those tests are skipped:
+
+- `test_vantool.py` skips the `VAN2FLC.EXE` check
+- `test_vanplay.py` skips the 1280 by 1024 test, which uses frames from VistaPro's `pic.van`
+
+`test_vantool.py` checks that:
+
+- the Linux build gives the same results as the Python reference (`tools/vanfile.py`)
+- the DOS build, run in dosemu2, gives byte-identical output to the Linux build
+- VistaPro's own `VAN2FLC.EXE` reads files built by `vantool make` correctly
+
+`test_vanplay.py` compares what each player shows, pixel by pixel, with the frames in the file. It captures
+the Linux build without a window and takes screenshots of the DOS build in dosbox-x. It covers:
+
+- mode 13h and VESA 640 by 400, 640 by 480 and 1280 by 1024
+- files with rows stored either way
+- images smaller than the screen, including an odd width
+- the Right and Home keys, and stepping through frames from the cache
+
+## Documentation
+
+- [VAN file specification](docs/VAN_SPEC.md) describes the file format.
+- [Reverse-engineering notes](docs/VAN_FORMAT.md) record the evidence behind the specification.
+
+## Other tools
+
+`tools/vanfile.py` is a Python reference implementation of the format. It needs no extra packages. It can
+show file details, export frames as PNG images, build files from PNG or FLC files, cut and repair files.
+
+`tools/gui` holds scripts for running DOS programs in dosbox-x and checking screenshots against `.VAN`
+frames.
+
+## Source files
+
+All C source files are in `src`.
+
+| File | Used on | Purpose |
+|---|---|---|
+| `van.c`, `van.h` | both | reading and writing `.VAN` files |
+| `img.c`, `img.h` | both | reading and writing BMP and PCX images |
+| `vantool.c` | both | `vantool` |
+| `vanplay.c` | both | `vanplay` playback loop |
+| `ring.c`, `ring.h` | both | frame cache for reading ahead |
+| `store.h` | both | interface to cache memory |
+| `store_xms.c` | DOS | cache in extended memory |
+| `store_mem.c` | Linux | cache in main memory |
+| `play.h` | both | interface to the display |
+| `play_dos.c` | DOS | VGA and VESA display, timer and keyboard |
+| `play_sdl.c` | Linux | SDL2 display |
+| `sys.h`, `sys_dos.c` | DOS | disk error and Ctrl-Break handling |
+| `sys_posix.c` | Linux | empty, not needed on Linux |
+
+The build scripts choose the files for each platform. The source has no `#ifdef` sections.
