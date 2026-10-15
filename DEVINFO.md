@@ -149,3 +149,49 @@ All C source files are in `src`.
 | `sys_posix.c` | Linux | empty, not needed on Linux |
 
 The build scripts choose the files for each platform. The source has no `#ifdef` sections.
+
+## Making changes
+
+Work on a branch, not on `main`:
+
+```
+git switch -c feature/short-name
+```
+
+Push the branch and open a pull request into `main`. Merge it when the checks pass.
+
+### Checks
+
+GitHub Actions runs `.github/workflows/ci.yml` on every push and pull request. It:
+
+- builds the Linux programs with gcc and SDL2, and runs both test scripts with `--no-dos`
+- builds the DOS programs with Open Watcom 2.0
+
+The DOS tests and the tests that need VistaPro do not run in CI. Run them locally before merging changes
+to the DOS code.
+
+Each run keeps the built programs for download, on the run's summary page.
+
+### Releases
+
+To publish a release, tag `main` and push the tag:
+
+```
+git switch main
+git pull
+git tag v1.0
+git push origin v1.0
+```
+
+The checks run, then a GitHub release is created with:
+
+| File | Contains |
+|---|---|
+| `vantool-v1.0-dos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
+| `vantool-v1.0-linux-x86_64.tar.gz` | `vantool`, `vanplay`, `README.md`, `VAN_SPEC.md` |
+
+Text files in the DOS package have 8.3 names and DOS line endings. The Linux `vanplay` needs the SDL2
+library (`libsdl2-2.0-0` on Debian and Ubuntu).
+
+To build the same packages locally, build the programs, then run `tools/package.sh dos VERSION` or
+`tools/package.sh linux VERSION`. Packages are written to `dist`.
