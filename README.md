@@ -3,7 +3,7 @@
 > **Guided slop.** An LLM was used to iterate this to output a spec, tool and player humans can use to
 > understand the VistaPro animation format.
 
-The tools build for DOS and Linux.
+The tools build for DOS, Linux and Windows (32 and 64 bit).
 
 
 Tools:
@@ -32,6 +32,9 @@ gcc has been tested for building and SDL dev libraries are required for `vanplay
 
 Open Watcom is required to build the DOS version.
 
+The Windows version is cross-compiled on Linux with mingw-w64, using the SDL2 MinGW development package
+from [libsdl.org](https://github.com/libsdl-org/SDL/releases).
+
 
 ## Build the programs
 
@@ -41,6 +44,7 @@ The programs are built in the `src` directory.
 |---|---|
 | `src/build-linux.sh` | `vantool` and, if SDL2 is installed, `vanplay` |
 | `src/build-dos.sh` | `VANTOOL.EXE` and `VANPLAY.EXE` (16-bit, large memory model, 386) |
+| `SDL2_DIR=DIR src/build-windows.sh 32` or `64` | `vantool.exe`, `vanplay.exe` and `SDL2.dll` in `build/win32` or `build/win64`. `DIR` is the unpacked SDL2 package; without it `vanplay.exe` is skipped |
 | `make -C src` | `vantool` and `vanplay` with gcc and SDL2 |
 
 
@@ -144,9 +148,9 @@ vanplay FILE.VAN [options]
 | `-v` | when the player stops, show how the display and memory were set up, and the frame rate achieved |
 | `-t WHAT` | measure speed: 0 read and draw, 1 read only, 2 draw only, 3 through the read-ahead memory |
 | `-m MODE` | DOS only: use this video mode, for example `0x13` or `0x101` |
-| `-x SCALE` | Linux only: window size as a multiple of the image size |
-| `-f` | Linux only: full screen |
-| `-c OUT.BMP` | Linux only: save the last frame shown as a BMP image (used by the tests) |
+| `-x SCALE` | Linux and Windows only: window size as a multiple of the image size |
+| `-f` | Linux and Windows only: full screen |
+| `-c OUT.BMP` | Linux and Windows only: save the last frame shown as a BMP image (used by the tests) |
 
 | Key | What it does |
 |---|---|
@@ -160,8 +164,8 @@ On DOS, `vanplay` shows the file in the video mode named in its header, as Vista
 card does not support that mode, it uses the smallest VistaPro mode that fits. Images smaller than the
 screen are shown in the middle.
 
-On Linux, `vanplay` opens a window at the largest whole-number scale that fits 1280 by 1024 pixels. Colours
-are converted from the file's 6-bit values the same way a VGA card does.
+On Linux and Windows, `vanplay` opens a window at the largest whole-number scale that fits 1280 by 1024
+pixels. Colours are converted from the file's 6-bit values the same way a VGA card does.
 
 
 ## Getting help on DOS

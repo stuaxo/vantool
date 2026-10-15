@@ -115,6 +115,19 @@ the Linux build without a window and takes screenshots of the DOS build in dosbo
 - images smaller than the screen, including an odd width
 - the Right and Home keys, and stepping through frames from the cache
 
+### Testing Windows builds on Linux
+
+Both test scripts accept `--exe` to test another build of the same program, and `--wrapper` to run it
+through another program. To test the Windows builds with Wine:
+
+```
+python3 tools/test_vantool.py --no-dos --exe build/win64/vantool.exe --wrapper wine
+python3 tools/test_vanplay.py --no-dos --exe build/win64/vanplay.exe --wrapper wine
+```
+
+Wine 10 as packaged by Ubuntu stops with `free(): invalid pointer` whenever `TMPDIR` is set, so the tests
+remove `TMPDIR` from the environment of the program they run.
+
 ## Documentation
 
 - [VAN file specification](docs/VAN_SPEC.md) describes the file format.
@@ -141,12 +154,12 @@ All C source files are in `src`.
 | `ring.c`, `ring.h` | both | frame cache for reading ahead |
 | `store.h` | both | interface to cache memory |
 | `store_xms.c` | DOS | cache in extended memory |
-| `store_mem.c` | Linux | cache in main memory |
+| `store_mem.c` | Linux, Windows | cache in main memory |
 | `play.h` | both | interface to the display |
 | `play_dos.c` | DOS | VGA and VESA display, timer and keyboard |
-| `play_sdl.c` | Linux | SDL2 display |
+| `play_sdl.c` | Linux, Windows | SDL2 display |
 | `sys.h`, `sys_dos.c` | DOS | disk error and Ctrl-Break handling |
-| `sys_posix.c` | Linux | empty, not needed on Linux |
+| `sys_posix.c` | Linux, Windows | empty, not needed there |
 
 The build scripts choose the files for each platform. The source has no `#ifdef` sections.
 
@@ -166,6 +179,8 @@ GitHub Actions runs `.github/workflows/ci.yml` on every push and pull request. I
 
 - builds the Linux programs with gcc and SDL2, and runs both test scripts with `--no-dos`
 - builds the DOS programs with Open Watcom 2.0
+- builds the 32-bit and 64-bit Windows programs with mingw-w64, then runs both test scripts against them
+  on a Windows runner
 
 The DOS tests and the tests that need VistaPro do not run in CI. Run them locally before merging changes
 to the DOS code.
@@ -189,9 +204,11 @@ The checks run, then a GitHub release is created with:
 |---|---|
 | `vantool-v1.0-dos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
 | `vantool-v1.0-linux-x86_64.tar.gz` | `vantool`, `vanplay`, `README.md`, `VAN_SPEC.md` |
+| `vantool-v1.0-win32.zip`, `vantool-v1.0-win64.zip` | `vantool.exe`, `vanplay.exe`, `SDL2.dll`, `README.txt`, `VAN_SPEC.txt`, `SDL2-LICENSE.txt` |
 | `vantool_1.0_amd64.deb` | `vantool` and `vanplay` in `/usr/bin`, documents in `/usr/share/doc/vantool` |
 
-Text files in the DOS package have 8.3 names and DOS line endings. The Linux `vanplay` needs the SDL2
+Text files in the DOS and Windows packages have DOS line endings, and those in the DOS package have 8.3
+names. The Linux `vanplay` needs the SDL2
 library (`libsdl2-2.0-0` on Debian and Ubuntu). The `.deb` lists its library dependencies, so install it
 with `sudo apt install ./vantool_1.0_amd64.deb` to fetch them.
 
@@ -199,5 +216,5 @@ The `.deb` is built on GitHub's current Ubuntu runner, so it needs a system with
 newer.
 
 To build the same packages locally, build the programs, then run `tools/package.sh dos VERSION` or
-`tools/package.sh linux VERSION` or `tools/package.sh deb VERSION`. The `.deb` needs `dpkg-dev`.
+`tools/package.sh linux VERSION`, `tools/package.sh deb VERSION` or `tools/package.sh win64 VERSION`. The `.deb` needs `dpkg-dev`.
 Packages are written to `dist`.

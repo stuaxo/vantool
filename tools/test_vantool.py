@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Regression tests for src/vantool (Linux and DOS builds) against the Python reference.
 
-  test_vantool.py [--no-dos] [--no-van2flc]
+  test_vantool.py [--no-dos] [--no-van2flc] [--exe PATH [--wrapper CMD]]
 
 1. Python writes test-pattern VANs (WN/PC, several sizes).
-2. Linux vantool: info, extract (BMP and PCX; pixels and palette checked independently),
+2. Linux vantool (or another build given with --exe, e.g. a Windows one run with --wrapper wine): info, extract (BMP and PCX; pixels and palette checked independently),
    make back from BMP/PCX (must be byte-identical to the source VAN), slice, repair.
 3. DOS VANTOOL.EXE in dosemu2: the same commands; outputs must match the Linux build byte for byte.
 4. VAN2FLC end-to-end on the VANs vantool made.
@@ -12,6 +12,7 @@
 import argparse
 import filecmp
 import os
+import shlex
 import shutil
 import struct
 import subprocess
@@ -25,6 +26,9 @@ from vanfile import VanFile, VanWriter, testpattern_frame, testpattern_palette  
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "src")
 LINUX_BIN = os.path.join(SRC, "vantool")
+VANTOOL = [LINUX_BIN]   # command for the build under test; set by --exe/--wrapper
+NAME = "linux"
+ENV = None              # environment for VANTOOL; None inherits ours
 DOS_EXE = os.path.join(SRC, "VANTOOL.EXE")
 DOSEMU = ["dosemu", "-dumb", "-td", "-I", '$_cpu_vm = "emulated"', "-I", '$_cpu_vm_dpmi = "emulated"',
           "-I", "$_sound = (off)"]
@@ -43,7 +47,7 @@ def check(cond, what):
 
 
 def run(args, cwd):
-    return subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(args, cwd=cwd, capture_output=True, text=True, env=ENV)
 
 
 def read_bmp(path):
@@ -85,38 +89,38 @@ def linux_tests(work):
         src = os.path.join(work, name + ".VAN")
         v = VanFile(src)
         pal8 = bytes((c << 2) | (c >> 4) for c in v.palette6)
-        r = run([LINUX_BIN, "info", src], work)
+        r = run([*VANTOOL, "info", src], work)
         check(r.returncode == 0 and f"{w} x {h}" in r.stdout and f"frames        {n}" in r.stdout,
-              f"linux info {name}")
+              f"{NAME} info {name}")
         for kind in ("bmp", "pcx"):
             pre = name[:2] + kind[0].upper()
-            r = run([LINUX_BIN, "extract", src, pre, "-t", kind], work)
-            check(r.returncode == 0, f"linux extract {name} {kind}")
+            r = run([*VANTOOL, "extract", src, pre, "-t", kind], work)
+            check(r.returncode == 0, f"{NAME} extract {name} {kind}")
             files = [os.path.join(work, f"{pre}{i:04d}.{kind.upper()}") for i in range(n)]
             ok = True
             for i, fpath in enumerate(files):
                 iw, ih, ipal, ipix = (read_bmp if kind == "bmp" else read_pcx)(fpath)
                 ok &= (iw, ih) == (w, h) and ipal == pal8 and ipix == v.read_frame(i)
-            check(ok, f"linux extract {name} {kind}: pixels+palette match reference")
+            check(ok, f"{NAME} extract {name} {kind}: pixels+palette match reference")
             out = os.path.join(work, f"{name[:4]}{kind[0]}.VAN")
-            args = [LINUX_BIN, "make", out, "-m", "0x13"] + (["-pc"] if var == "PC" else []) + files
+            args = [*VANTOOL, "make", out, "-m", "0x13"] + (["-pc"] if var == "PC" else []) + files
             r = run(args, work)
             check(r.returncode == 0 and filecmp.cmp(out, src, shallow=False),
-                  f"linux make from {kind} {name}: byte-identical to source")
+                  f"{NAME} make from {kind} {name}: byte-identical to source")
         sl = os.path.join(work, name[:4] + "S.VAN")
-        r = run([LINUX_BIN, "slice", src, sl, "1", "2"], work)
+        r = run([*VANTOOL, "slice", src, sl, "1", "2"], work)
         v2 = VanFile(sl)
         check(r.returncode == 0 and v2.frame_count == min(2, n - 1) and v2.read_frame(0) == v.read_frame(1),
-              f"linux slice {name}")
+              f"{NAME} slice {name}")
     # pattern input, palette mismatch, repair
-    r = run([LINUX_BIN, "make", "PAT.VAN", "-p", "A3B%04d.BMP", "-n", "4", "-m", "0x13"], work)
+    r = run([*VANTOOL, "make", "PAT.VAN", "-p", "A3B%04d.BMP", "-n", "4", "-m", "0x13"], work)
     check(r.returncode == 0 and filecmp.cmp(os.path.join(work, "PAT.VAN"), os.path.join(work, "A320.VAN"), False),
-          "linux make -p pattern")
+          f"{NAME} make -p pattern")
     shutil.copy(os.path.join(work, "A320.VAN"), os.path.join(work, "R.VAN"))
-    r = run([LINUX_BIN, "repair", "R.VAN", "-pc"], work)
-    check(r.returncode == 0 and VanFile(os.path.join(work, "R.VAN")).variant == "PC", "linux repair -pc")
-    r = run([LINUX_BIN, "info", "NOSUCH.VAN"], work)
-    check(r.returncode == 1 and "cannot open" in r.stderr, "linux error on missing file")
+    r = run([*VANTOOL, "repair", "R.VAN", "-pc"], work)
+    check(r.returncode == 0 and VanFile(os.path.join(work, "R.VAN")).variant == "PC", f"{NAME} repair -pc")
+    r = run([*VANTOOL, "info", "NOSUCH.VAN"], work)
+    check(r.returncode == 1 and "cannot open" in r.stderr, f"{NAME} error on missing file")
 
 
 def dos_tests(work):
@@ -145,12 +149,12 @@ def dos_tests(work):
                                                     {c[0] + ".VAN" for c in CASES} | {"R.VAN"}):
             other = produced.get(f.upper())
             check(other is not None and filecmp.cmp(os.path.join(work, f), other, shallow=False),
-                  f"dos output {f} identical to linux")
+                  f"dos output {f} identical to {NAME}")
     for name, *_ in CASES:
         inf = produced.get(name[:6].upper() + ".INF")
-        lin = run([LINUX_BIN, "info", name + ".VAN"], work).stdout.replace("\n", "\r\n")
+        lin = run([*VANTOOL, "info", name + ".VAN"], work).stdout.replace("\n", "\r\n")
         dos = open(inf, newline="").read() if inf else ""
-        check(dos.split("\r\n")[1:] == lin.split("\r\n")[1:], f"dos info {name} matches linux")
+        check(dos.split("\r\n")[1:] == lin.split("\r\n")[1:], f"dos info {name} matches {NAME}")
 
 
 def main():
@@ -158,7 +162,15 @@ def main():
     p.add_argument("--no-dos", action="store_true")
     p.add_argument("--no-van2flc", action="store_true")
     p.add_argument("--keep", action="store_true", help="keep the work directory")
+    p.add_argument("--exe", help="vantool build to test instead of src/vantool")
+    p.add_argument("--wrapper", default="", help="command to run --exe with, e.g. wine")
     a = p.parse_args()
+    if a.exe:
+        global VANTOOL, NAME, ENV
+        VANTOOL = shlex.split(a.wrapper) + [os.path.abspath(a.exe)]
+        # Wine 10 (Ubuntu 10.0~repack) aborts with "free(): invalid pointer" whenever TMPDIR is set
+        ENV = {k: v for k, v in os.environ.items() if k != "TMPDIR"}
+        NAME = os.path.basename(os.path.dirname(VANTOOL[-1])) or "exe"
     work = tempfile.mkdtemp(prefix="vantool_test_")
     try:
         make_inputs(work)

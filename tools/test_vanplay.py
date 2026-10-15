@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pixel-exact tests for vanplay (Linux SDL build and DOS VANPLAY.EXE).
 
-  test_vanplay.py [--no-dos] [--no-sdl]
+  test_vanplay.py [--no-dos] [--no-sdl] [--exe PATH [--wrapper CMD]]
 
 SDL:  runs the Linux build headless (SDL_VIDEODRIVER=dummy) with -n 1 -c capture.bmp and compares
       the rendered capture with the reference frame at scales 1 and 2.
@@ -11,6 +11,7 @@ DOS:  runs VANPLAY.EXE paused (-p -s N) in dosbox-x on Xvfb :99, screenshots, an
 """
 import argparse
 import os
+import shlex
 import shutil
 import struct
 import subprocess
@@ -25,6 +26,9 @@ from vanfile import VanFile, VanWriter, testpattern_frame, testpattern_palette  
 
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "src")
+VANPLAY = [os.path.join(SRC, "vanplay")]   # SDL build under test; set by --exe/--wrapper
+NAME = "sdl"
+DROP_ENV = ()
 GUI = os.path.join(HERE, "gui")
 VISTAPRO = os.environ.get("VISTAPRO", os.path.join(ROOT, "vistapro"))   # VistaPro 3.20 directory (optional)
 PIC = os.path.join(VISTAPRO, "pic.van")
@@ -77,8 +81,8 @@ def make_files(work):
 
 
 def sdl_tests(files, work):
-    exe = os.path.join(SRC, "vanplay")
-    env = dict(os.environ, SDL_VIDEODRIVER="dummy")
+    env = {k: v for k, v in os.environ.items() if k not in DROP_ENV}
+    env["SDL_VIDEODRIVER"] = "dummy"
     # read-ahead ring: play a run of frames through budgets of 0, 2 slots, 5 slots and all frames,
     # wrapping past the end; the last frame shown must be exact
     v = VanFile(files["T640"])
@@ -87,24 +91,24 @@ def sdl_tests(files, work):
         start, count = 2, 7                                     # frames 2..8 then wraps (4 frames total)
         last = (start + count - 1) % v.frame_count
         cap = os.path.join(work, f"ring_{kb}.bmp")
-        r = subprocess.run([exe, files["T640"], "-s", str(start), "-n", str(count), "-r", "60", "-b", str(kb),
+        r = subprocess.run([*VANPLAY, files["T640"], "-s", str(start), "-n", str(count), "-r", "60", "-b", str(kb),
                             "-x", "1", "-c", cap], env=env, capture_output=True, text=True, timeout=120)
         ok = r.returncode == 0 and os.path.exists(cap)
         if ok:
             _, _, px = read_bmp32(cap)
             ok = compare(v, last, px, 0, 0, 1)
-        check(ok, f"sdl read-ahead budget {kb} KB: frames {start}..{start + count - 1} (wrapping), last exact")
+        check(ok, f"{NAME} read-ahead budget {kb} KB: frames {start}..{start + count - 1} (wrapping), last exact")
     for name, path in files.items():
         v = VanFile(path)
         for frame, scale in ((v.frame_count - 1, 1), (1, 2)):
             cap = os.path.join(work, f"{name}_{frame}_{scale}.bmp")
-            r = subprocess.run([exe, path, "-s", str(frame), "-n", "1", "-x", str(scale), "-c", cap],
+            r = subprocess.run([*VANPLAY, path, "-s", str(frame), "-n", "1", "-x", str(scale), "-c", cap],
                                env=env, capture_output=True, text=True, timeout=120)
             ok = r.returncode == 0 and os.path.exists(cap)
             if ok:
                 cw, ch, px = read_bmp32(cap)
                 ok = (cw, ch) == (v.width * scale, v.height * scale) and compare(v, frame, px, 0, 0, scale)
-            check(ok, f"sdl {name} frame {frame} scale {scale}")
+            check(ok, f"{NAME} {name} frame {frame} scale {scale}")
 
 
 class DosBox:
@@ -188,7 +192,14 @@ def main():
     p.add_argument("--no-dos", action="store_true")
     p.add_argument("--no-sdl", action="store_true")
     p.add_argument("--keep", action="store_true")
+    p.add_argument("--exe", help="SDL vanplay build to test instead of src/vanplay")
+    p.add_argument("--wrapper", default="", help="command to run --exe with, e.g. wine")
     a = p.parse_args()
+    if a.exe:
+        global VANPLAY, NAME, DROP_ENV
+        VANPLAY = shlex.split(a.wrapper) + [os.path.abspath(a.exe)]
+        NAME = os.path.basename(os.path.dirname(VANPLAY[-1])) or "exe"
+        DROP_ENV = ("TMPDIR",)   # Wine 10 (Ubuntu 10.0~repack) aborts whenever TMPDIR is set
     work = tempfile.mkdtemp(prefix="vanplay_test_")
     try:
         files = make_files(work)

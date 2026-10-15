@@ -3,12 +3,13 @@
 #   tools/package.sh dos VERSION    ->  dist/vantool-VERSION-dos.zip
 #   tools/package.sh linux VERSION  ->  dist/vantool-VERSION-linux-x86_64.tar.gz
 #   tools/package.sh deb VERSION    ->  dist/vantool_DEBVERSION_ARCH.deb (needs dpkg-dev)
-# DOS text files get 8.3 names and CRLF line endings.  A deb version must start with a digit, so a
+#   tools/package.sh win32|win64 VERSION  ->  dist/vantool-VERSION-win32.zip | -win64.zip (after src/build-windows.sh)
+# DOS and Windows text files get CRLF line endings, and DOS ones 8.3 names.  A deb version must start with a digit, so a
 # leading "v" is dropped (v1.0 -> 1.0) and anything else, such as a branch name, becomes 0~name.
 set -e
 cd "$(dirname "$0")/.."
-KIND=${1:?usage: package.sh dos|linux|deb VERSION}
-VER=${2:?usage: package.sh dos|linux|deb VERSION}
+KIND=${1:?usage: package.sh dos|linux|deb|win32|win64 VERSION}
+VER=${2:?usage: package.sh dos|linux|deb|win32|win64 VERSION}
 mkdir -p dist
 STAGE=$(mktemp -d)
 trap 'rm -rf "${STAGE:?}"' EXIT
@@ -29,6 +30,16 @@ linux)
     [ -f LICENSE ] && cp LICENSE "$D"
     OUT="$PWD/dist/vantool-$VER-linux-x86_64.tar.gz"
     tar -C "$STAGE" -czf "$OUT" "$(basename "$D")"
+    ;;
+win32|win64)
+    cp build/$KIND/vantool.exe build/$KIND/vanplay.exe build/$KIND/SDL2.dll "$STAGE"
+    sed 's/$/\r/' README.md > "$STAGE/README.txt"
+    sed 's/$/\r/' docs/VAN_SPEC.md > "$STAGE/VAN_SPEC.txt"
+    [ -f LICENSE ] && sed 's/$/\r/' LICENSE > "$STAGE/LICENSE.txt"
+    [ -n "$SDL2_DIR" ] && sed 's/$/\r/' "$SDL2_DIR/LICENSE.txt" > "$STAGE/SDL2-LICENSE.txt"
+    OUT="$PWD/dist/vantool-$VER-$KIND.zip"
+    rm -f "$OUT"
+    (cd "$STAGE" && zip -q -X "$OUT" *)
     ;;
 deb)
     case "$VER" in
