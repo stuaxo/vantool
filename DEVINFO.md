@@ -204,6 +204,7 @@ The checks run, then a GitHub release is created with:
 |---|---|
 | `vantool-v1.0-dos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
 | `vantool-v1.0-linux-x86_64.tar.gz` | `vantool`, `vanplay`, `README.md`, `VAN_SPEC.md` |
+| `vantool-v1.0-freedos.zip` | FreeDOS package: `APPINFO\VANTOOL.LSM`, the programs and documents in `PROGS\VANTOOL`, and `LINKS` batch files that put both programs on the `PATH` |
 | `vantool-v1.0-win32.zip`, `vantool-v1.0-win64.zip` | `vantool.exe`, `vanplay.exe`, `SDL2.dll`, `README.txt`, `VAN_SPEC.txt`, `SDL2-LICENSE.txt` |
 | `vantool_1.0_amd64.deb` | `vantool` and `vanplay` in `/usr/bin`, documents in `/usr/share/doc/vantool` |
 
@@ -215,6 +216,9 @@ with `sudo apt install ./vantool_1.0_amd64.deb` to fetch them.
 The `.deb` is built on GitHub's current Ubuntu runner, so it needs a system with that glibc version or
 newer.
 
+The FreeDOS package's `Copying-policy` says "Not yet specified" until a licence is chosen. Set
+`COPYING_POLICY` when running `tools/package.sh freedos` to change it.
+
 To build the same packages locally, build the programs, then run `tools/package.sh dos VERSION` or
-`tools/package.sh linux VERSION`, `tools/package.sh deb VERSION` or `tools/package.sh win64 VERSION`. The `.deb` needs `dpkg-dev`.
+`tools/package.sh freedos VERSION`, `tools/package.sh linux VERSION`, `tools/package.sh deb VERSION` or `tools/package.sh win64 VERSION`. The `.deb` needs `dpkg-dev`.
 Packages are written to `dist`.

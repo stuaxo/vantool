@@ -18,6 +18,18 @@ The spec is derived from Vistapro 3.20 for DOS, further work is needed to check 
 [VAN file specification](docs/VAN_SPEC.md).
 
 
+## Install on FreeDOS
+
+Download `vantool-VERSION-freedos.zip` from the releases page, then install it with FreeDOS's package
+manager:
+
+```
+FDNPKG install VANTOOL.ZIP
+```
+
+Rename the file to `VANTOOL.ZIP` first if your system only allows short filenames.
+
+
 ## DOS requirements
 
 - At least a 386
