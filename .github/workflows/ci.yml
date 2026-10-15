@@ -22,7 +22,14 @@ jobs:
       - name: Test vanplay
         run: python3 tools/test_vanplay.py --no-dos
       - name: Package
-        run: tools/package.sh linux "${GITHUB_REF_NAME//\//-}"
+        run: |
+          tools/package.sh linux "${GITHUB_REF_NAME//\//-}"
+          tools/package.sh deb "$GITHUB_REF_NAME"
+      - name: Test deb
+        run: |
+          sudo apt-get install -y ./dist/vantool_*.deb
+          out=$(vantool 2>&1 || true); echo "$out" | head -1; [[ $out == vantool* ]]
+          sudo apt-get remove -y vantool
       - uses: actions/upload-artifact@v4
         with:
           name: linux

@@ -189,9 +189,15 @@ The checks run, then a GitHub release is created with:
 |---|---|
 | `vantool-v1.0-dos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
 | `vantool-v1.0-linux-x86_64.tar.gz` | `vantool`, `vanplay`, `README.md`, `VAN_SPEC.md` |
+| `vantool_1.0_amd64.deb` | `vantool` and `vanplay` in `/usr/bin`, documents in `/usr/share/doc/vantool` |
 
 Text files in the DOS package have 8.3 names and DOS line endings. The Linux `vanplay` needs the SDL2
-library (`libsdl2-2.0-0` on Debian and Ubuntu).
+library (`libsdl2-2.0-0` on Debian and Ubuntu). The `.deb` lists its library dependencies, so install it
+with `sudo apt install ./vantool_1.0_amd64.deb` to fetch them.
+
+The `.deb` is built on GitHub's current Ubuntu runner, so it needs a system with that glibc version or
+newer.
 
 To build the same packages locally, build the programs, then run `tools/package.sh dos VERSION` or
-`tools/package.sh linux VERSION`. Packages are written to `dist`.
+`tools/package.sh linux VERSION` or `tools/package.sh deb VERSION`. The `.deb` needs `dpkg-dev`.
+Packages are written to `dist`.
