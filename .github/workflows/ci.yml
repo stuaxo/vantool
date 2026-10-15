@@ -1,0 +1,122 @@
+# Builds and tests on every push and pull request.  Pushing a tag like v1.0 also publishes a release.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SDL2
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
+      - name: Build
+        run: src/build-linux.sh
+      - name: Test vantool
+        run: python3 tools/test_vantool.py --no-dos
+      - name: Test vanplay
+        run: python3 tools/test_vanplay.py --no-dos
+      - name: Package
+        run: |
+          tools/package.sh linux "${GITHUB_REF_NAME//\//-}"
+          tools/package.sh deb "$GITHUB_REF_NAME"
+      - name: Test deb
+        run: |
+          sudo apt-get install -y ./dist/vantool_*.deb
+          out=$(vantool 2>&1 || true); echo "$out" | head -1; [[ $out == vantool* ]]
+          sudo apt-get remove -y vantool
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-linux
+          path: dist/
+
+  dos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: open-watcom/setup-watcom@v0
+        with:
+          version: "2.0"
+      - name: Build
+        run: src/build-dos.sh
+      - name: Package
+        run: tools/package.sh dos "${GITHUB_REF_NAME//\//-}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-dos
+          path: dist/
+
+  windows:
+    # cross-compiled with mingw-w64, then tested on a real Windows runner below
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bits: [32, 64]
+    env:
+      SDL2_VERSION: 2.30.9
+      SDL2_SHA256: b188d165dc4a0372042bff3d0c18e9bb90772581e92a7b8b47b521b47714f75c
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mingw-w64
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+      - name: Fetch SDL2
+        run: |
+          f=SDL2-devel-$SDL2_VERSION-mingw.tar.gz
+          curl -sSfLO "https://github.com/libsdl-org/SDL/releases/download/release-$SDL2_VERSION/$f"
+          echo "$SDL2_SHA256  $f" | sha256sum -c
+          tar xzf "$f"
+          echo "SDL2_DIR=$PWD/SDL2-$SDL2_VERSION" >> "$GITHUB_ENV"
+      - name: Build
+        run: src/build-windows.sh ${{ matrix.bits }}
+      - name: Package
+        run: tools/package.sh win${{ matrix.bits }} "${GITHUB_REF_NAME//\//-}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-win${{ matrix.bits }}
+          path: build/win${{ matrix.bits }}/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-win${{ matrix.bits }}
+          path: dist/
+
+  windows-test:
+    needs: windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        bits: [32, 64]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin-win${{ matrix.bits }}
+          path: build/win${{ matrix.bits }}
+      - name: Test vantool
+        run: python tools/test_vantool.py --no-dos --exe build/win${{ matrix.bits }}/vantool.exe
+      - name: Test vanplay
+        run: python tools/test_vanplay.py --no-dos --exe build/win${{ matrix.bits }}/vanplay.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, dos, windows-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: pkg-*
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

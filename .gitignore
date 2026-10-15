@@ -6,9 +6,12 @@ src/vantool
 src/vanplay
 src/*.EXE
 src/*.exe
+build/
 # python
 __pycache__/
 # VistaPro files are not part of this repository
 vistapro/
 *.VAN
 *.van
+# release packages
+dist/
