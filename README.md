@@ -172,6 +172,10 @@ pixels. Colours are converted from the file's 6-bit values the same way a VGA ca
 
 Run either program with `/?` to see its options.
 
+Both programs accept long filenames, such as `"My Animation.van"`, where DOS supports them: in a Windows 9x
+DOS box, on FreeDOS with a long filename driver such as DOSLFN, and in DOSBox-X and dosemu2. Elsewhere, DOS
+shortens long names to 8.3 as usual.
+
 If a disk error happens, for example a full disk or an empty drive, the program reports it and stops. It
 does not show the DOS "Abort, Retry, Fail?" prompt. This has been built but not yet tested against a real
 disk error.
