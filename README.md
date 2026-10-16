@@ -20,14 +20,13 @@ The spec is derived from Vistapro 3.20 for DOS, further work is needed to check 
 
 ## Install on FreeDOS
 
-Download `vantool-VERSION-freedos.zip` from the releases page, then install it with FreeDOS's package
-manager:
+Download `vantool.zip` from the releases page, then install it with FreeDOS's package manager:
 
 ```
 FDNPKG install VANTOOL.ZIP
 ```
 
-Rename the file to `VANTOOL.ZIP` first if your system only allows short filenames.
+For DOS without a package manager, download `vantdos.zip` and unzip it into a directory of your choice.
 
 
 ## DOS requirements

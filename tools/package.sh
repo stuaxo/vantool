@@ -1,11 +1,12 @@
 #!/bin/bash
 # Package built programs for release.  Run after src/build-dos.sh and/or src/build-linux.sh.
-#   tools/package.sh dos VERSION    ->  dist/vantool-VERSION-dos.zip
-#   tools/package.sh freedos VERSION  ->  dist/vantool-VERSION-freedos.zip (FreeDOS package; install with FDNPKG)
+#   tools/package.sh dos VERSION    ->  dist/vantdos.zip
+#   tools/package.sh freedos VERSION  ->  dist/vantool.zip (FreeDOS package; install with FDNPKG)
 #   tools/package.sh linux VERSION  ->  dist/vantool-VERSION-linux-x86_64.tar.gz
 #   tools/package.sh deb VERSION    ->  dist/vantool_DEBVERSION_ARCH.deb (needs dpkg-dev)
 #   tools/package.sh win32|win64 VERSION  ->  dist/vantool-VERSION-win32.zip | -win64.zip (after src/build-windows.sh)
-# DOS and Windows text files get CRLF line endings, and DOS ones 8.3 names.  A deb version must start with a digit, so a
+# DOS and Windows text files get CRLF line endings, and DOS ones 8.3 names.  The two DOS zips have 8.3
+# names without a version, so DOS can download and use them as they are; the version is in the LSM.  A deb version must start with a digit, so a
 # leading "v" is dropped (v1.0 -> 1.0) and anything else, such as a branch name, becomes 0~name.
 set -e
 cd "$(dirname "$0")/.."
@@ -20,7 +21,7 @@ dos)
     sed 's/$/\r/' README.md > "$STAGE/README.TXT"
     sed 's/$/\r/' docs/VAN_SPEC.md > "$STAGE/VANSPEC.TXT"
     [ -f LICENSE ] && sed 's/$/\r/' LICENSE > "$STAGE/LICENSE.TXT"
-    OUT="$PWD/dist/vantool-$VER-dos.zip"
+    OUT="$PWD/dist/vantdos.zip"
     rm -f "$OUT"
     (cd "$STAGE" && zip -q -X "$OUT" *)
     ;;
@@ -50,7 +51,7 @@ Platforms:      DOS, FreeDOS
 Copying-policy: ${COPYING_POLICY:-BSD 2-Clause License}
 End
 LSM
-    OUT="$PWD/dist/vantool-$VER-freedos.zip"
+    OUT="$PWD/dist/vantool.zip"   # FreeDOS packages are named after the package
     rm -f "$OUT"
     (cd "$STAGE" && zip -q -9 -r -k -X "$OUT" APPINFO PROGS LINKS)
     ;;

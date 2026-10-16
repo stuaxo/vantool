@@ -202,11 +202,14 @@ The checks run, then a GitHub release is created with:
 
 | File | Contains |
 |---|---|
-| `vantool-v1.0-dos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
+| `vantdos.zip` | `VANTOOL.EXE`, `VANPLAY.EXE`, `README.TXT`, `VANSPEC.TXT` |
 | `vantool-v1.0-linux-x86_64.tar.gz` | `vantool`, `vanplay`, `README.md`, `VAN_SPEC.md` |
-| `vantool-v1.0-freedos.zip` | FreeDOS package: `APPINFO\VANTOOL.LSM`, the programs and documents in `PROGS\VANTOOL`, and `LINKS` batch files that put both programs on the `PATH` |
+| `vantool.zip` | FreeDOS package: `APPINFO\VANTOOL.LSM`, the programs and documents in `PROGS\VANTOOL`, and `LINKS` batch files that put both programs on the `PATH` |
 | `vantool-v1.0-win32.zip`, `vantool-v1.0-win64.zip` | `vantool.exe`, `vanplay.exe`, `SDL2.dll`, `README.txt`, `VAN_SPEC.txt`, `SDL2-LICENSE.txt` |
 | `vantool_1.0_amd64.deb` | `vantool` and `vanplay` in `/usr/bin`, documents in `/usr/share/doc/vantool` |
+
+The two DOS zips have 8.3 names so they can be downloaded and used on DOS as they are. Their names do
+not include the version; the release tag and the FreeDOS package's `APPINFO\VANTOOL.LSM` give it.
 
 Text files in the DOS and Windows packages have DOS line endings, and those in the DOS package have 8.3
 names. The Linux `vanplay` needs the SDL2
