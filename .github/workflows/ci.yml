@@ -45,7 +45,9 @@ jobs:
       - name: Build
         run: src/build-dos.sh
       - name: Package
-        run: tools/package.sh dos "${GITHUB_REF_NAME//\//-}"
+        run: |
+          tools/package.sh dos "${GITHUB_REF_NAME//\//-}"
+          tools/package.sh freedos "${GITHUB_REF_NAME//\//-}"
       - uses: actions/upload-artifact@v4
         with:
           name: pkg-dos

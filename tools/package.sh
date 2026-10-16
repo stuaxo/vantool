@@ -1,15 +1,17 @@
 #!/bin/bash
 # Package built programs for release.  Run after src/build-dos.sh and/or src/build-linux.sh.
-#   tools/package.sh dos VERSION    ->  dist/vantool-VERSION-dos.zip
+#   tools/package.sh dos VERSION    ->  dist/vantdos.zip
+#   tools/package.sh freedos VERSION  ->  dist/vantool.zip (FreeDOS package; install with FDNPKG)
 #   tools/package.sh linux VERSION  ->  dist/vantool-VERSION-linux-x86_64.tar.gz
 #   tools/package.sh deb VERSION    ->  dist/vantool_DEBVERSION_ARCH.deb (needs dpkg-dev)
 #   tools/package.sh win32|win64 VERSION  ->  dist/vantool-VERSION-win32.zip | -win64.zip (after src/build-windows.sh)
-# DOS and Windows text files get CRLF line endings, and DOS ones 8.3 names.  A deb version must start with a digit, so a
+# DOS and Windows text files get CRLF line endings, and DOS ones 8.3 names.  The two DOS zips have 8.3
+# names without a version, so DOS can download and use them as they are; the version is in the LSM.  A deb version must start with a digit, so a
 # leading "v" is dropped (v1.0 -> 1.0) and anything else, such as a branch name, becomes 0~name.
 set -e
 cd "$(dirname "$0")/.."
-KIND=${1:?usage: package.sh dos|linux|deb|win32|win64 VERSION}
-VER=${2:?usage: package.sh dos|linux|deb|win32|win64 VERSION}
+KIND=${1:?usage: package.sh dos|freedos|linux|deb|win32|win64 VERSION}
+VER=${2:?usage: package.sh dos|freedos|linux|deb|win32|win64 VERSION}
 mkdir -p dist
 STAGE=$(mktemp -d)
 trap 'rm -rf "${STAGE:?}"' EXIT
@@ -19,9 +21,39 @@ dos)
     sed 's/$/\r/' README.md > "$STAGE/README.TXT"
     sed 's/$/\r/' docs/VAN_SPEC.md > "$STAGE/VANSPEC.TXT"
     [ -f LICENSE ] && sed 's/$/\r/' LICENSE > "$STAGE/LICENSE.TXT"
-    OUT="$PWD/dist/vantool-$VER-dos.zip"
+    OUT="$PWD/dist/vantdos.zip"
     rm -f "$OUT"
     (cd "$STAGE" && zip -q -X "$OUT" *)
+    ;;
+freedos)
+    # FreeDOS layout for non-core programs: APPINFO\VANTOOL.LSM, PROGS\VANTOOL\*, LINKS\*.BAT
+    mkdir -p "$STAGE/APPINFO" "$STAGE/PROGS/VANTOOL" "$STAGE/LINKS"
+    P="$STAGE/PROGS/VANTOOL"
+    cp src/VANTOOL.EXE src/VANPLAY.EXE "$P"
+    sed 's/$/\r/' README.md > "$P/README.TXT"
+    sed 's/$/\r/' docs/VAN_SPEC.md > "$P/VANSPEC.TXT"
+    [ -f LICENSE ] && sed 's/$/\r/' LICENSE > "$P/LICENSE.TXT"
+    # LINKS batch files only name the target; the package manager rewrites them on install
+    printf 'PROGS\\VANTOOL\\VANTOOL.EXE\r\n' > "$STAGE/LINKS/VANTOOL.BAT"
+    printf 'PROGS\\VANTOOL\\VANPLAY.EXE\r\n' > "$STAGE/LINKS/VANPLAY.BAT"
+    sed 's/$/\r/' > "$STAGE/APPINFO/VANTOOL.LSM" <<LSM
+Begin3
+Title:          vantool
+Version:        ${VER#v}
+Entered-date:   $(date -u +%Y-%m-%d)
+Description:    Inspect, convert, repair and play VistaPro .VAN animations
+Summary:        vantool extracts .VAN frames to BMP or PCX, builds .VAN files from images, cuts them and repairs them (including the VistaPro 3.20 continue fault). vanplay plays them in VGA or VESA modes, with an XMS frame cache.
+Keywords:       vistapro, van, animation, graphics, video, vesa
+Author:         Stuart Axon
+Maintained-by:  Stuart Axon
+Primary-site:   https://github.com/stuaxo/vantool
+Platforms:      DOS, FreeDOS
+Copying-policy: ${COPYING_POLICY:-BSD 2-Clause License}
+End
+LSM
+    OUT="$PWD/dist/vantool.zip"   # FreeDOS packages are named after the package
+    rm -f "$OUT"
+    (cd "$STAGE" && zip -q -9 -r -k -X "$OUT" APPINFO PROGS LINKS)
     ;;
 linux)
     D="$STAGE/vantool-$VER-linux-x86_64"
