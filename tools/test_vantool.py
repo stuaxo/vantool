@@ -7,6 +7,7 @@
 2. Linux vantool (or another build given with --exe, e.g. a Windows one run with --wrapper wine): info, extract (BMP and PCX; pixels and palette checked independently),
    make back from BMP/PCX (must be byte-identical to the source VAN), slice, repair.
 3. DOS VANTOOL.EXE in dosemu2: the same commands; outputs must match the Linux build byte for byte.
+   Also reads and writes long filenames (dosemu2 provides the DOS long filename API).
 4. VAN2FLC end-to-end on the VANs vantool made.
 """
 import argparse
@@ -140,6 +141,9 @@ def dos_tests(work):
             lines.append(f"VANTOOL make {name[:4]}{kind[0]}.VAN -m 0x13 {'-pc ' if var == 'PC' else ''}{files}")
         lines.append(f"VANTOOL slice {name}.VAN {name[:4]}S.VAN 1 2")
     lines.append("VANTOOL make PAT.VAN -p A3B%%04d.BMP -n 4 -m 0x13")  # %% for COMMAND.COM
+    shutil.copy(os.path.join(work, "A320.VAN"), os.path.join(d, "Long Source Name.van"))
+    lines.append('VANTOOL info "Long Source Name.van" > LONGNAME.INF')
+    lines.append('VANTOOL slice "Long Source Name.van" "Long Slice Output.van" 1 2')
     open(os.path.join(d, "T.BAT"), "w").write("\r\n".join(lines) + "\r\n")
     r = subprocess.run(DOSEMU + ["--Fdrive_c", d, "-E", "T.BAT"], capture_output=True, text=True,
                        errors="replace", timeout=300, stdin=subprocess.DEVNULL)
@@ -155,6 +159,11 @@ def dos_tests(work):
         lin = run([*VANTOOL, "info", name + ".VAN"], work).stdout.replace("\n", "\r\n")
         dos = open(inf, newline="").read() if inf else ""
         check(dos.split("\r\n")[1:] == lin.split("\r\n")[1:], f"dos info {name} matches {NAME}")
+    inf = produced.get("LONGNAME.INF")
+    check(inf is not None and "Long Source Name.van" in open(inf).read(), "dos info reads a long filename")
+    out = os.path.join(d, "Long Slice Output.van")
+    check(os.path.exists(out) and filecmp.cmp(out, os.path.join(work, "A320S.VAN"), shallow=False),
+          "dos slice writes a long filename")
 
 
 def main():
