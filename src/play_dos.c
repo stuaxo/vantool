@@ -228,6 +228,11 @@ const char *plat_info(void)
     return infostr;
 }
 
+int plat_mode_available(u32 mode, u32 width, u32 height)
+{
+    return probe(mode, width, height);
+}
+
 int plat_init(VanFile *v, const PlayOpts *o, char *err)
 {
     union REGS r;

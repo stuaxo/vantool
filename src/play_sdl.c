@@ -114,6 +114,12 @@ const char *plat_info(void)
     return s;
 }
 
+int plat_mode_available(u32 mode, u32 width, u32 height)
+{
+    (void)mode; (void)width; (void)height;
+    return -1;                    /* any size is shown in a window */
+}
+
 int plat_draw_store(u32 off)
 {
     (void)off;

@@ -98,11 +98,32 @@ static int benchmark(VanFile *v, int what, u32 count)
     return 0;
 }
 
+/* -modes: the VistaPro 3.20 video modes, and on DOS whether this display has them. */
+static void list_modes(void)
+{
+    int i, avail;
+    puts("VistaPro 3.20 video modes, for use with -m:");
+    puts("");
+    avail = plat_mode_available(van_modes[0].mode, van_modes[0].width, van_modes[0].height) >= 0;
+    puts(avail ? "  mode    size            this display" : "  mode    size");
+    for (i = 0; i < van_mode_count; i++) {
+        const VanMode *m = &van_modes[i];
+        int a = plat_mode_available(m->mode, m->width, m->height);
+        printf("  0x%-5lX %4lu x %lu", m->mode, m->width, m->height);
+        printf(a < 0 ? "\n" : "%*s%s\n", m->height < 1000 ? 6 : 5, "", a ? "yes" : "no");
+    }
+    if (!avail) {
+        puts("");
+        puts("-m only applies on DOS. Here the animation is shown in a window of any size.");
+    }
+}
+
 static void usage(void)
 {
     static const char *const text[] = {
         "vanplay " VERSION " - VistaPro VANIM (.VAN) player",
         "",
+        "  vanplay -modes",
         "  vanplay FILE.VAN [-r FPS] [-l LOOPS] [-p] [-s FRAME] [-n COUNT] [-m MODE] [-x SCALE] [-f] [-c OUT.BMP]",
         "",
         "  -r FPS     frames per second (default 10)",
@@ -114,7 +135,8 @@ static void usage(void)
         "             WHAT 0 = read+draw, 1 = read only, 2 = draw only, 3 = via read-ahead (2 passes)",
         "  -b KB      read-ahead memory (default 8192; DOS uses XMS); 0 = stream from disk",
         "  -v         print display and buffering details on exit",
-        "  -m MODE    DOS: force a video mode, e.g. 0x13 or 0x101 (default: the file's)",
+        "  -m MODE    DOS: use this VistaPro video mode, e.g. 0x13 or 0x101 (default: the file's)",
+        "  -modes     list the VistaPro video modes, and on DOS which this display has",
         "  -x SCALE   Linux: window scale (default: fit 1280x1024)",
         "  -f         Linux: fullscreen",
         "  -c OUT.BMP Linux: on exit, save the last frame shown, as rendered (for testing)",
@@ -141,6 +163,10 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "/?") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
             usage();
+            return 0;
+        }
+        if (!strcmp(argv[i], "-modes") || !strcmp(argv[i], "--modes")) {
+            list_modes();
             return 0;
         }
         if (!strcmp(argv[i], "-r") && i + 1 < argc) fps = strtoul(argv[++i], NULL, 0);
