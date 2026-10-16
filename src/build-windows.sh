@@ -14,7 +14,7 @@ mkdir -p "$OUT"
 CC=${CC:-$TRIPLE-gcc}
 # -static-libgcc: no libgcc DLL to ship.  sys_posix.c is plain C and does nothing, which suits Windows too.
 CFLAGS="-O2 -std=c89 -pedantic -Wall -Wextra -Wno-long-long -static-libgcc"
-$CC $CFLAGS -o "$OUT/vantool.exe" vantool.c van.c img.c sys_posix.c
+$CC $CFLAGS -o "$OUT/vantool.exe" vantool.c van.c img.c flc.c sys_posix.c
 if [ -n "$SDL2_DIR" ]; then
     SDL="$SDL2_DIR/$TRIPLE"
     $CC $CFLAGS -mconsole -I"$SDL/include/SDL2" -o "$OUT/vanplay.exe" vanplay.c play_sdl.c van.c sys_posix.c ring.c store_mem.c \

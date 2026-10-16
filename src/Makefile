@@ -6,7 +6,7 @@ SDL_LIBS := $(shell pkg-config --libs sdl2)
 
 all: vantool vanplay
 
-vantool: vantool.o van.o img.o sys_posix.o
+vantool: vantool.o van.o img.o flc.o sys_posix.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 vanplay: vanplay.o play_sdl.o van.o sys_posix.o ring.o store_mem.o
@@ -15,7 +15,7 @@ vanplay: vanplay.o play_sdl.o van.o sys_posix.o ring.o store_mem.o
 play_sdl.o: play_sdl.c play.h van.h
 	$(CC) $(CFLAGS) $(SDL_CFLAGS) -c $<
 
-%.o: %.c van.h img.h play.h sys.h ring.h store.h
+%.o: %.c van.h img.h flc.h play.h sys.h ring.h store.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
