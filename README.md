@@ -147,7 +147,8 @@ vanplay FILE.VAN [options]
 | `-b KB` | memory to use for reading frames ahead, in KB (default 8192); 0 reads every frame from disk |
 | `-v` | when the player stops, show how the display and memory were set up, and the frame rate achieved |
 | `-t WHAT` | measure speed: 0 read and draw, 1 read only, 2 draw only, 3 through the read-ahead memory |
-| `-m MODE` | DOS only: use this video mode, for example `0x13` or `0x101` |
+| `-m MODE` | DOS only: use this VistaPro video mode, for example `0x13` or `0x101` |
+| `-modes` | list the VistaPro video modes; on DOS, also show which ones the display supports |
 | `-x SCALE` | Linux and Windows only: window size as a multiple of the image size |
 | `-f` | Linux and Windows only: full screen |
 | `-c OUT.BMP` | Linux and Windows only: save the last frame shown as a BMP image (used by the tests) |
