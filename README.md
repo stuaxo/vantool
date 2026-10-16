@@ -3,7 +3,7 @@
 > **Guided slop.** An LLM was used to iterate this to output a spec, tool and player humans can use to
 > understand the VistaPro animation format.
 
-The tools build for DOS, Linux and Windows (32 and 64 bit).
+The tools build for DOS, Linux and Windows (x86 and amd64).
 
 
 Tools:
@@ -37,6 +37,9 @@ For DOS without a package manager, download `vantdos.zip` and unzip it into a di
 - XMS (optional) for frame cache.
 
 
+Note: Currently untested on real hardware, let us know if you try it.
+
+
 # Build requirements
 
 gcc has been tested for building and SDL dev libraries are required for `vanplay`.
@@ -57,6 +60,8 @@ The programs are built in the `src` directory.
 | `src/build-dos.sh` | `VANTOOL.EXE` and `VANPLAY.EXE` (16-bit, large memory model, 386) |
 | `SDL2_DIR=DIR src/build-windows.sh 32` or `64` | `vantool.exe`, `vanplay.exe` and `SDL2.dll` in `build/win32` or `build/win64`. `DIR` is the unpacked SDL2 package; without it `vanplay.exe` is skipped |
 | `make -C src` | `vantool` and `vanplay` with gcc and SDL2 |
+
+TODO:  Build on DOS itself.
 
 
 ## Look at a file
@@ -144,6 +149,11 @@ Step 3 matters because VistaPro keeps writing frames bottom to top, whatever the
 
 ## Play a file
 
+
+Create an animation using Vistapro (3.20 was tested) and save the .van file,
+you can play it with `vanplay`:
+
+
 ```
 vanplay FILE.VAN [options]
 ```
@@ -172,11 +182,13 @@ vanplay FILE.VAN [options]
 | Home | go to the first frame |
 
 On DOS, `vanplay` shows the file in the video mode named in its header, as VistaPro's VIEWER does. If the
-card does not support that mode, it uses the smallest VistaPro mode that fits. Images smaller than the
-screen are shown in the middle.
+card does not support that mode, it uses the smallest VistaPro mode that fits. 
+Images smaller than the screen are centred.
 
 On Linux and Windows, `vanplay` opens a window at the largest whole-number scale that fits 1280 by 1024
-pixels. Colours are converted from the file's 6-bit values the same way a VGA card does.
+pixels.
+
+Colours are converted from the file's 6-bit values the same way a VGA card does.
 
 
 ## Getting help on DOS
@@ -191,59 +203,15 @@ If you press Ctrl-Break during playback, `vanplay` returns the screen to text mo
 memory before it exits.
 
 
-## How vanplay uses memory
-
-`vanplay` plays `.VAN` files as they are. It does not compress or convert them. The only extra memory it
-uses is a cache of frames, which has a fixed upper size.
-
-
-### Extended memory (DOS) or main memory (Linux)
-
-`vanplay` reads frames ahead into a cache of up to 8 MB. You can change the limit with `-b`. The cache uses
-whichever is smallest:
-
-- the limit
-- the largest free block of extended memory
-- the size of the file
-
-If the whole file fits, it is read once and later loops play from memory. If it does not fit, the cache holds
-the next few frames.
-
-If there is no extended memory, or not enough for one frame, `vanplay` reads every frame from disk.
-
-
-### Conventional memory (DOS)
-
-`vanplay` uses one block of conventional memory for reading the file. It tries 60 KB first, then 32, 16, 8
-and 4 KB, and always leaves 4 KB free. In mode 13h (320 by 200) it also uses 64 KB to build each frame off
-screen. If there is not enough memory for this, it draws straight to the screen.
-
-
-### Checking what was chosen
-
-Use `-v` to see what `vanplay` chose and why. For example:
-
-```
-read-ahead 0 of 193 frames in none - no extended memory available; I/O block 32768 bytes
-```
-
-## How vanplay keeps playback smooth
-
-Reading from disk is the slowest part of playback. Drawing is much faster.
-
-`vanplay` does not wait idly between frames. While a frame is on screen, it reads the next frames into
-the cache. It also does this while playback is paused.
-
-If a frame is due before it has been fully read, `vanplay` shows the part already in memory, then reads the
-rest from disk. It keeps a copy in the cache, so no frame is read from disk twice.
-
-
 ### Display on DOS
 
 In VESA `vanplay` will use 1, 2 or 3 screen pages depending on how much memory the card has.
 If there is only 1 page then screen tearing will occur.
 
 For 320x200 animations `vanplay` will use mode 13h (classic VGA 320x200) with buffering when there is space.
+
+
+See: DEVINFO.md for low level information on performance and display.
 
 
 ## Licence
