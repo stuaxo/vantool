@@ -127,6 +127,23 @@ vantool slice IN.VAN OUT.VAN FIRST [COUNT]
 This copies frames from `FIRST` onwards to a new file. Use `COUNT` to set how many frames to copy. If you
 leave it out, all remaining frames are copied.
 
+## Convert to an FLC or FLI animation
+
+```
+vantool flc IN.VAN OUT.FLC [-r FPS] [-f FIRST] [-n COUNT]
+```
+
+This writes the animation as an FLC file, which most animation players and video editors can open. Use
+`-r` to set the playback speed in frames per second (default 10). Use `-f` and `-n` to convert only some
+of the frames, as with `extract`.
+
+If the output name ends in `.FLI`, `vantool` writes the older FLI format instead. FLI files are always
+320 by 200 pixels, so this only works for animations of that size.
+
+The file ends with an extra frame that leads from the last frame back to the first, so players can loop
+it smoothly. VistaPro's `VAN2FLC` does the same.
+
+
 ## Repair a file
 
 ```

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "van.h"
 #include "img.h"
+#include "flc.h"
 #include "sys.h"
 
 #define VERSION "0.1"
@@ -26,6 +27,9 @@ static void usage(void)
         "      -pc      write VANIMPC (top-down) instead of VANIMWN (VP3 3.20 default)",
         "      -k       keep going if a frame's palette differs (use the first frame's)",
         "  vantool slice IN.VAN OUT.VAN FIRST [COUNT]",
+        "  vantool flc IN.VAN OUT.FLC [-r FPS] [-f FIRST] [-n COUNT]",
+        "      convert to an FLC animation; an OUT name ending .FLI writes the",
+        "      older FLI format instead (320x200 only).  -r: playback speed (default 10)",
         "  vantool repair FILE.VAN [-pc]",
         "      rewrite the magic in place (fixes VP3 'continue' on a VANIMPC file)",
         NULL
@@ -276,6 +280,69 @@ static int cmd_slice(int argc, char **argv)
     return 0;
 }
 
+/* ---------- flc ---------- */
+
+/* Two readers, so the previous and the current frame are each read in order, not alternately. */
+typedef struct {
+    VanFile v[2];
+    u32 at[2];      /* frame each reader is on */
+    int last;       /* reader used last */
+    u32 first;      /* source frame of output frame 0 */
+} FlcSource;
+
+static int flc_row(void *p, u32 frame, u32 y, unsigned char *row, char *e)
+{
+    FlcSource *s = (FlcSource *)p;
+    int i = s->at[0] == frame ? 0 : s->at[1] == frame ? 1 : !s->last;
+    s->at[i] = frame;
+    s->last = i;
+    return van_read_row(&s->v[i], s->first + frame, y, row, e);
+}
+
+static int cmd_flc(int argc, char **argv)
+{
+    static FlcSource s;
+    const char *ext;
+    u32 fps = 10, first = 0, count = 0;
+    int i, fli, failed;
+
+    if (argc < 2) { usage(); return 2; }
+    for (i = 2; i < argc; i++) {
+        if (!strcmp(argv[i], "-r") && i + 1 < argc) fps = num(argv[++i]);
+        else if (!strcmp(argv[i], "-f") && i + 1 < argc) first = num(argv[++i]);
+        else if (!strcmp(argv[i], "-n") && i + 1 < argc) count = num(argv[++i]);
+        else { usage(); return 2; }
+    }
+    ext = strrchr(argv[1], '.');
+    fli = ext && (!strcmp(ext, ".fli") || !strcmp(ext, ".FLI") || !strcmp(ext, ".Fli"));
+    if (van_open(&s.v[0], argv[0], err))
+        return fail();
+    if (van_open(&s.v[1], argv[0], err)) {
+        van_close(&s.v[0]);
+        return fail();
+    }
+    s.at[0] = s.at[1] = (u32)-1;
+    s.last = 1;
+    if (fli && (s.v[0].width != 320 || s.v[0].height != 200)) {
+        sprintf(err, "FLI files are always 320x200, this is %lux%lu: write a .FLC instead",
+                s.v[0].width, s.v[0].height);
+        failed = 1;
+    } else {
+        if (!count || first + count > s.v[0].frames)
+            count = first < s.v[0].frames ? s.v[0].frames - first : 0;
+        s.first = first;
+        failed = flc_write(argv[1], fli, s.v[0].width, s.v[0].height, count, fps, s.v[0].palette,
+                           flc_row, &s, err);
+    }
+    van_close(&s.v[0]);
+    van_close(&s.v[1]);
+    if (failed)
+        return fail();
+    printf("%s: %s, %lux%lu, %lu frames at %lu fps\n", argv[1], fli ? "FLI" : "FLC",
+           s.v[0].width, s.v[0].height, count, fps ? fps : 1);
+    return 0;
+}
+
 /* ---------- repair ---------- */
 
 static int cmd_repair(int argc, char **argv)
@@ -308,6 +375,7 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "make"))    return cmd_make(argc - 2, argv + 2);
     if (!strcmp(argv[1], "slice"))   return cmd_slice(argc - 2, argv + 2);
     if (!strcmp(argv[1], "repair"))  return cmd_repair(argc - 2, argv + 2);
+    if (!strcmp(argv[1], "flc"))     return cmd_flc(argc - 2, argv + 2);
     usage();
     return 2;
 }

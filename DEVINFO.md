@@ -106,6 +106,15 @@ Without it, those tests are skipped:
 - the Linux build gives the same results as the Python reference (`tools/vanfile.py`)
 - the DOS build, run in dosemu2, gives byte-identical output to the Linux build
 - VistaPro's own `VAN2FLC.EXE` reads files built by `vantool make` correctly
+- every frame of each FLC and FLI file `vantool flc` writes, and the frame that loops back to the start,
+  decodes exactly with `tools/flc.py` and, if it is installed, ffmpeg
+
+The FLC and FLI files were also checked by eye in VistaPro's `PLAYFLC.EXE`, in dosbox-x. Screenshots
+matched the frames pixel for pixel.
+
+FLC files normally store changes between frames as SS2 chunks. SS2 keeps the last pixel of an odd-width
+line in a special word, which `PLAYFLC.EXE` and ffmpeg both ignore. So for odd widths, `vantool` uses
+LC chunks instead, which store bytes rather than pairs of bytes.
 
 `test_vanplay.py` compares what each player shows, pixel by pixel, with the frames in the file. It captures
 the Linux build without a window and takes screenshots of the DOS build in dosbox-x. It covers:
@@ -149,6 +158,7 @@ All C source files are in `src`.
 |---|---|---|
 | `van.c`, `van.h` | both | reading and writing `.VAN` files |
 | `img.c`, `img.h` | both | reading and writing BMP and PCX images |
+| `flc.c`, `flc.h` | both | writing FLC and FLI animations |
 | `vantool.c` | both | `vantool` |
 | `vanplay.c` | both | `vanplay` playback loop |
 | `ring.c`, `ring.h` | both | frame cache for reading ahead |
