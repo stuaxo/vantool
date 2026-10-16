@@ -1,0 +1,90 @@
+.TH VANPLAY 1 "October 2026" "vantool" "User Commands"
+.SH NAME
+vanplay \- play VistaPro .VAN animations
+.SH SYNOPSIS
+.B vanplay \-modes
+.br
+.B vanplay
+.I FILE.VAN
+.RB [ \-r
+.IR FPS ]
+.RB [ \-l
+.IR LOOPS ]
+.RB [ \-p ]
+.RB [ \-s
+.IR FRAME ]
+.RB [ \-n
+.IR COUNT ]
+.RB [ \-x
+.IR SCALE ]
+.RB [ \-f ]
+.RB [ \-c
+.IR OUT.BMP ]
+.SH DESCRIPTION
+.B vanplay
+plays the VANIM (.VAN) animations made by VistaPro 3.20 for DOS in an SDL2 window.
+.SH OPTIONS
+.TP
+.BI \-r " FPS"
+Frames per second. The default is 10.
+.TP
+.BI \-l " LOOPS"
+Play this many times. 0, the default, plays forever.
+.TP
+.B \-p
+Start paused.
+.TP
+.BI \-s " FRAME"
+Start at this frame.
+.TP
+.BI \-n " COUNT"
+Exit after showing
+.I COUNT
+frames.
+.TP
+.BI \-t " WHAT"
+Benchmark: show
+.B \-n
+frames, or all of them, as fast as possible and print the frame rate.
+.I WHAT
+is 0 for read and draw, 1 for read only, 2 for draw only, or 3 for read through
+the read-ahead buffer (two passes).
+.TP
+.BI \-b " KB"
+Read-ahead memory. The default is 8192. 0 streams from disk.
+.TP
+.B \-v
+Print display and buffering details on exit.
+.TP
+.B \-modes
+List the VistaPro video modes and exit.
+.TP
+.BI \-x " SCALE"
+Window scale. The default fits the animation in 1280x1024.
+.TP
+.B \-f
+Fullscreen.
+.TP
+.BI \-c " OUT.BMP"
+On exit, save the last frame shown, as rendered.
+.TP
+.BI \-m " MODE"
+Video mode to use. This only applies to the DOS build.
+.SH KEYS
+.TP
+.BR Esc ", " q
+Quit.
+.TP
+.B Space
+Pause or resume.
+.TP
+.BR Left ", " Right
+Step one frame back or forward.
+.TP
+.BR + ", " \-
+Faster or slower.
+.TP
+.B Home
+Go to the first frame.
+.SH SEE ALSO
+.BR vantool (1)
