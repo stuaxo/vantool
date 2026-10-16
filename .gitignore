@@ -15,3 +15,11 @@ vistapro/
 *.van
 # release packages
 dist/
+# Debian packaging build output
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/vantool/
+debian/vantool-dbgsym/
