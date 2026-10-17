@@ -144,12 +144,15 @@ def make_anim(path, w, h, kinds, fli=False, pal_events=None, stamp=False, seed=1
     pal = [(0, 0, 0)] * 256
     pals = []
     plan = []
+    # some files hold 8-bit levels in COLOR_64 chunks: once one chunk has a level above 63, all do
+    wide64 = any(max(c) > 63 for chunks in (pal_events or {}).values() for (ck, _, rgb) in chunks
+                 if ck == "64" for c in rgb)
     for i, kind in enumerate(kinds):
         step = {"kind": kind, "stamp": stamp and i == 0}
         step["pal"] = (pal_events or {}).get(i, [])
         for (ck, start, rgb) in step["pal"]:
             for j, c in enumerate(rgb):
-                v6 = [(x >> 2) if ck == "256" else x for x in c]
+                v6 = [(x >> 2) if ck == "256" or wide64 else x for x in c]
                 pal = pal[:start + j] + [tuple(_disp(x) for x in v6)] + pal[start + j + 1:]
         plan.append(step)
         if i < n:
@@ -176,6 +179,8 @@ def anim_cases(work):
         ev={0: [("256", 0, ramp(2))]}, stamp=True)
     add("FLI BRUN+LC with a BLACK frame", 320, 200, ["brun", "lc", "black", "lc", "copy", "lc", "lc"],
         fli=True, ev={0: [("64", 0, [(i % 64, (i * 5) % 64, 63 - i % 64) for i in range(256)])]})
+    add("FLI with 8-bit levels in COLOR_64 chunks", 320, 200, ["brun", "lc", "lc", "lc", "lc"], fli=True,
+        ev={0: [("64", 0, ramp(1))], 2: [("64", 10, [(8, 16, 32)] * 5)], 4: [("64", 0, ramp(1))]})
     add("FLC BLACK first, then LC and SS2", 320, 200, ["black", "lc", "ss2", "lc", "ss2"],
         ev={0: [("256", 0, ramp(3))], 2: [("256", 100, ramp(5)[:100])]})
     add("FLC 640x480 BRUN+SS2", 640, 480, ["brun", "ss2", "ss2", "ss2"], ev={0: [("256", 0, ramp(1))]})
@@ -246,6 +251,27 @@ def flc_tests(files, work):
               f"{NAME} FLC plays at the speed in its header")
     else:
         print("SKIP  vantool flc round trip (no vantool next to the player)")
+
+    # real files, if FLC_SAMPLES names a directory of them (they are not part of the repository)
+    samples = os.environ.get("FLC_SAMPLES")
+    if samples and os.path.isdir(samples):
+        for fn in sorted(os.listdir(samples)):
+            if not fn.lower().endswith((".fli", ".flc")):
+                continue
+            path = os.path.join(samples, fn)
+            ref = Flc(path)
+            c = ref.frames
+            want = sorted({0, 1, c // 2, c - 1})
+            decoded = {i: (pal, px) for i, (pal, px) in enumerate(ref.iter_frames()) if i in want or i == c}
+            ok = True
+            for f in want:
+                pal, px = decoded[f]
+                rgb = [tuple(_disp(pal[i * 3 + k] >> 2) for k in range(3)) for i in range(256)]
+                ok = ok and exact(path, ref.width, ref.height, px, rgb, "-s", str(f), "-n", "1")
+            pal, px = decoded[0]
+            rgb = [tuple(_disp(pal[i * 3 + k] >> 2) for k in range(3)) for i in range(256)]
+            ok = ok and exact(path, ref.width, ref.height, px, rgb, "-s", str(c - 1), "-n", "2", "-r", "60")
+            check(ok, f"{NAME} real file {fn} ({ref.width}x{ref.height}, {c} frames): frames {want} and the loop exact")
 
     # damaged files must be refused or played without crashing
     path = anim_cases(work)[0][1]

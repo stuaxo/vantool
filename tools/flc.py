@@ -23,6 +23,7 @@ class Flc:
         self.oframe1, self.oframe2 = struct.unpack_from("<II", self.data, 80)
         if self.magic == 0xAF11 or not self.oframe1:
             self.oframe1 = 128
+        self.wide64 = False   # some files hold 8-bit levels in COLOR_64 chunks; see _color
 
     def iter_frames(self):
         w, h = self.width, self.height
@@ -58,22 +59,28 @@ class Flc:
             pos += fsize
             yield bytes(pal), bytes(pix)
 
-    @staticmethod
-    def _color(d, p, pal, kind):
+    def _color(self, d, p, pal, kind):
+        # COLOR_64 holds 6-bit levels, but once one chunk has a level above 63 the file's COLOR_64
+        # chunks are all read as 8-bit (the player does the same)
         n = struct.unpack_from("<H", d, p)[0]
         p += 2
         idx = 0
+        entries = []
         for _ in range(n):
             idx += d[p]
             cnt = d[p + 1] or 256
             p += 2
             for _ in range(cnt):
-                rgb = d[p:p + 3]
-                if kind == 11:
-                    rgb = bytes(c << 2 for c in rgb)
-                pal[idx * 3:idx * 3 + 3] = rgb
+                entries.append((idx, d[p:p + 3]))
                 idx += 1
                 p += 3
+        if kind == 11 and any(max(rgb) > 63 for _, rgb in entries):
+            self.wide64 = True
+        for idx, rgb in entries:
+            if kind == 11 and not self.wide64:
+                rgb = bytes(c << 2 for c in rgb)
+            if idx < 256:
+                pal[idx * 3:idx * 3 + 3] = rgb
 
     @staticmethod
     def _brun(d, p, pix, w, h):

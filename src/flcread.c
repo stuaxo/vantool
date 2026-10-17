@@ -57,11 +57,14 @@ static void clear_picture(FlcFile *c)
     c->pal_gen++;
 }
 
-/* Palette chunk: packets of (colours to skip, count with 0 = 256, RGB triples).  COLOR_64 holds 6-bit
- * levels; COLOR_256 holds 8-bit ones. */
-static void chunk_color(FlcFile *c, int shift)
+/* Palette chunk: packets of (colours to skip, count with 0 = 256, RGB triples).  COLOR_256 holds 8-bit
+ * levels and COLOR_64 holds 6-bit ones.  Some files put 8-bit levels in COLOR_64 chunks, so once one has
+ * a level above 63 the file's COLOR_64 chunks are all read as 8-bit. */
+static void chunk_color(FlcFile *c, int is64)
 {
-    unsigned packets = rd16(c), idx = 0, n, i, k;
+    static unsigned char raw[256 * 3], has[256];
+    unsigned packets = rd16(c), idx = 0, n, i, k, v, max = 0, shift;
+    memset(has, 0, sizeof(has));
     while (packets-- && !c->bad) {
         idx += rd8(c);
         n = rd8(c);
@@ -69,12 +72,23 @@ static void chunk_color(FlcFile *c, int shift)
             n = 256;
         for (i = 0; i < n; i++, idx++) {
             for (k = 0; k < 3; k++) {
-                unsigned v = rd8(c) >> shift;
-                if (idx < 256)
-                    c->pal6[idx * 3 + k] = (unsigned char)(v & 63);
+                v = rd8(c);
+                if (v > max)
+                    max = v;
+                if (idx < 256) {
+                    raw[idx * 3 + k] = (unsigned char)v;
+                    has[idx] = 1;
+                }
             }
         }
     }
+    if (is64 && max > 63)
+        c->pal8 = 1;
+    shift = !is64 || c->pal8 ? 2 : 0;
+    for (i = 0; i < 256; i++)
+        if (has[i])
+            for (k = 0; k < 3; k++)
+                c->pal6[i * 3 + k] = (unsigned char)((raw[i * 3 + k] >> shift) & 63);
     c->pal_gen++;
 }
 
@@ -241,8 +255,8 @@ static int decode_next(FlcFile *c, char *err)
             return 1;
         }
         switch (ctype) {
-        case CK_COLOR_256: chunk_color(c, 2); break;
-        case CK_COLOR_64:  chunk_color(c, 0); break;
+        case CK_COLOR_256: chunk_color(c, 0); break;
+        case CK_COLOR_64:  chunk_color(c, 1); break;
         case CK_SS2:       chunk_ss2(c); break;
         case CK_LC:        chunk_lc(c); break;
         case CK_BRUN:      chunk_brun(c); break;

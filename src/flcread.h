@@ -14,6 +14,7 @@ typedef struct {
     FILE *f;
     int fli;                       /* 1 = FLI (320x200), 0 = FLC */
     int bad;                       /* ran off the end of the file while decoding */
+    int pal8;                      /* COLOR_64 chunks hold 8-bit levels, as some files' do */
     u32 width, height;
     u32 frames;                    /* not counting the ring frame */
     u32 delay_ms;                  /* per frame, from the header; 0 if the file does not say */

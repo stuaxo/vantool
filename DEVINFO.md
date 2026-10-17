@@ -129,7 +129,9 @@ The Linux build is also tested on FLI and FLC files (not yet DOS: it needs Open 
 COPY and BLACK frames, partial palette changes, SS2 line skips and odd-width last pixels, LC inside an FLC, and a
 chunk it must skip. The tests check that each frame and its palette are exact, that the ring frame loops back
 to the first frame and play carries on after it, that files from `vantool flc` play the same as the `.VAN`
-they came from, and that damaged files do not crash the player. The decoder was also run under
+they came from, and that damaged files do not crash the player. Set `FLC_SAMPLES` to a directory of real
+`.fli` and `.flc` files (none are in the repository) to check them against `tools/flc.py` too; ffmpeg's
+samples at samples.ffmpeg.org/fli-flc and a few games' and VistaPro's files were used. The decoder was also run under
 AddressSanitizer and UBSan on a few hundred damaged files.
 
 ### Testing Windows builds on Linux
