@@ -15,7 +15,7 @@ vanplay: vanplay.o play_sdl.o van.o sys_posix.o ring.o store_mem.o
 play_sdl.o: play_sdl.c play.h van.h
 	$(CC) $(CFLAGS) $(SDL_CFLAGS) -c $<
 
-%.o: %.c van.h img.h flc.h play.h sys.h ring.h store.h
+%.o: %.c van.h img.h flc.h play.h sys.h ring.h store.h version.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:

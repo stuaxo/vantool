@@ -199,14 +199,20 @@ Each run keeps the built programs for download, on the run's summary page.
 
 ### Releases
 
-To publish a release, tag `main` and push the tag:
+The version lives in `src/version.h`; both programs print it. To publish a release, set it there (as
+`X.Y.Z`, and in `debian/changelog` too once that exists), merge that to `main`, then tag `main` and push
+the tag:
 
 ```
 git switch main
 git pull
-git tag v1.0
-git push origin v1.0
+tools/check-version.sh v1.0.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
+
+CI runs `tools/check-version.sh` on every push, and on a tag it fails, and no release is made, unless
+the tag matches `src/version.h`.
 
 The checks run, then a GitHub release is created with:
 

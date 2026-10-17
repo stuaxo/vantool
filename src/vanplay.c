@@ -7,8 +7,8 @@
 #include "sys.h"
 #include "ring.h"
 #include "store.h"
+#include "version.h"
 
-#define VERSION "0.1"
 
 static unsigned char rowbuf[VAN_MAX_WIDTH + 2];
 static char err[256], info[320];
