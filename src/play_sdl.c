@@ -15,8 +15,7 @@ static char title[300];
 
 int plat_init(VanFile *v, const PlayOpts *o, char *err)
 {
-    int i, scale = o->scale;
-    const unsigned char *p = v->palette;
+    int scale = o->scale;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         sprintf(err, "SDL_Init: %.200s", SDL_GetError());
@@ -30,10 +29,7 @@ int plat_init(VanFile *v, const PlayOpts *o, char *err)
         for (scale = 1; width * (scale + 1) <= 1280 && height * (scale + 1) <= 1024; scale++)
             ;
     }
-    /* 6-bit VGA DAC levels shown as (v<<2)|(v>>4), exactly what VGA hardware displays */
-    for (i = 0; i < 256; i++, p += 3)
-        pal32[i] = 0xFF000000UL | ((Uint32)((p[0] << 2) | (p[0] >> 4)) << 16) |
-                   ((Uint32)((p[1] << 2) | (p[1] >> 4)) << 8) | (Uint32)((p[2] << 2) | (p[2] >> 4));
+    plat_palette(v->palette);
     pixels = (Uint32 *)calloc((size_t)width * height, sizeof(Uint32));
     win = SDL_CreateWindow("vanplay", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                            (int)width * scale, (int)height * scale,
@@ -55,8 +51,18 @@ int plat_init(VanFile *v, const PlayOpts *o, char *err)
         sprintf(err, "SDL_CreateTexture: %.200s", SDL_GetError());
         return 1;
     }
-    sprintf(title, "vanplay - %.200s", v->pc ? "VANIMPC" : "VANIMWN");
+    sprintf(title, "vanplay - %.200s", o->format ? o->format : v->pc ? "VANIMPC" : "VANIMWN");
     return 0;
+}
+
+void plat_palette(const unsigned char *p)
+{
+    int i;
+    /* 6-bit VGA DAC levels shown as (v<<2)|(v>>4), exactly what VGA hardware displays.  Rows already
+     * drawn keep their colours, so a player that changes the palette redraws the whole frame. */
+    for (i = 0; i < 256; i++, p += 3)
+        pal32[i] = 0xFF000000UL | ((Uint32)((p[0] << 2) | (p[0] >> 4)) << 16) |
+                   ((Uint32)((p[1] << 2) | (p[1] >> 4)) << 8) | (Uint32)((p[2] << 2) | (p[2] >> 4));
 }
 
 void plat_row(void *ctx, u32 y, const unsigned char *row)

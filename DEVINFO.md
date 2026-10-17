@@ -124,6 +124,14 @@ the Linux build without a window and takes screenshots of the DOS build in dosbo
 - images smaller than the screen, including an odd width
 - the Right and Home keys, and stepping through frames from the cache
 
+The Linux build is also tested on FLI and FLC files (not yet DOS: it needs Open Watcom, which is only on CI).
+`tools/flcenc.py` is a test-only encoder that writes every chunk type the player reads, which `vantool flc` does not:
+COPY and BLACK frames, partial palette changes, SS2 line skips and odd-width last pixels, LC inside an FLC, and a
+chunk it must skip. The tests check that each frame and its palette are exact, that the ring frame loops back
+to the first frame and play carries on after it, that files from `vantool flc` play the same as the `.VAN`
+they came from, and that damaged files do not crash the player. The decoder was also run under
+AddressSanitizer and UBSan on a few hundred damaged files.
+
 ### Testing Windows builds on Linux
 
 Both test scripts accept `--exe` to test another build of the same program, and `--wrapper` to run it
@@ -159,8 +167,9 @@ All C source files are in `src`.
 | `van.c`, `van.h` | both | reading and writing `.VAN` files |
 | `img.c`, `img.h` | both | reading and writing BMP and PCX images |
 | `flc.c`, `flc.h` | both | writing FLC and FLI animations |
+| `flcread.c`, `flcread.h` | both | reading FLC and FLI animations for `vanplay` |
 | `vantool.c` | both | `vantool` |
-| `vanplay.c` | both | `vanplay` playback loop |
+| `vanplay.c` | both | `vanplay` playback loop, for `.VAN` and FLI/FLC files |
 | `ring.c`, `ring.h` | both | frame cache for reading ahead |
 | `store.h` | both | interface to cache memory |
 | `store_xms.c` | DOS | cache in extended memory |

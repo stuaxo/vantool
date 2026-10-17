@@ -398,6 +398,16 @@ void plat_row(void *ctx, u32 y, const unsigned char *row)
     }
 }
 
+/* A new palette is held back until its frame is shown, so the old picture never appears in the new colours. */
+static unsigned char pending_pal[VAN_PALETTE_SIZE];
+static int pal_pending;
+
+void plat_palette(const unsigned char *pal6)
+{
+    memcpy(pending_pal, pal6, sizeof(pending_pal));
+    pal_pending = 1;
+}
+
 void plat_frame_done(u32 frame)
 {
     (void)frame;
@@ -420,6 +430,10 @@ void plat_frame_done(u32 frame)
         scr.back = (scr.back + 1) % (unsigned)scr.pages;
         need_wait = 1;
     }                                             /* single-page VESA: drawn directly */
+    if (pal_pending) {
+        set_palette(pending_pal);
+        pal_pending = 0;
+    }
 }
 
 int plat_key(void)

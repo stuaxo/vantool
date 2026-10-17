@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "van.h"
+#include "flcread.h"
 #include "play.h"
 #include "sys.h"
 #include "ring.h"
@@ -12,10 +13,31 @@
 
 static unsigned char rowbuf[VAN_MAX_WIDTH + 2];
 static char err[256], info[320];
+static FlcFile flc;
+static int is_flc;                 /* playing an FLI/FLC rather than a .VAN */
+static unsigned flc_pal_seen;
+
+/* An FLI/FLC frame: decode it, then draw the whole picture (rows are cheap; the palette may change). */
+static int show_flc(u32 frame)
+{
+    u32 y;
+    if (flcr_seek(&flc, frame, err))
+        return 1;
+    if (flc.pal_gen != flc_pal_seen) {
+        plat_palette(flc.pal6);
+        flc_pal_seen = flc.pal_gen;
+    }
+    for (y = 0; y < flc.height; y++)
+        plat_row(NULL, y, flc.rows[y]);
+    plat_frame_done(frame);
+    return 0;
+}
 
 /* Draw a frame: from the read-ahead ring when it has one, else straight from disk. */
 static int show(VanFile *v, u32 frame)
 {
+    if (is_flc)
+        return show_flc(frame);
     if (ring_slots()) {
         ring_want_from(frame);
         if (!ring_has(frame) && plat_draws_visibly()) {
@@ -68,6 +90,17 @@ static void report(const char *what, VanFile *v, u32 f, u32 ms)
 static int benchmark(VanFile *v, int what, u32 count)
 {
     u32 f, y, t0, ms[2], pass;
+    if (is_flc) {
+        /* decoding and drawing can't be told apart without breaking the deltas: time them together */
+        t0 = plat_ms();
+        for (f = 0; f < count && !show(v, f % v->frames); f++)
+            if (plat_key() == KEY_QUIT)
+                break;
+        ms[0] = plat_ms() - t0;
+        cleanup();
+        report("decode+draw", v, f, ms[0]);
+        return 0;
+    }
     if (what == 3) {
         for (pass = 0; pass < 2; pass++) {
             t0 = plat_ms();
@@ -121,21 +154,21 @@ static void list_modes(void)
 static void usage(void)
 {
     static const char *const text[] = {
-        "vanplay " VERSION " - VistaPro VANIM (.VAN) player",
+        "vanplay " VERSION " - VistaPro VANIM (.VAN) and FLI/FLC animation player",
         "",
         "  vanplay -modes",
-        "  vanplay FILE.VAN [-r FPS] [-l LOOPS] [-p] [-s FRAME] [-n COUNT] [-m MODE] [-x SCALE] [-f] [-c OUT.BMP]",
+        "  vanplay FILE [-r FPS] [-l LOOPS] [-p] [-s FRAME] [-n COUNT] [-m MODE] [-x SCALE] [-f] [-c OUT.BMP]",
         "",
-        "  -r FPS     frames per second (default 10)",
+        "  -r FPS     frames per second (default 10; for an FLI/FLC, the file's own speed)",
         "  -l LOOPS   play this many times, 0 = forever (default 0)",
         "  -p         start paused",
         "  -s FRAME   start at this frame",
         "  -n COUNT   exit after showing COUNT frames (for testing)",
         "  -t WHAT    benchmark: show -n frames (default all) flat out, print fps;",
         "             WHAT 0 = read+draw, 1 = read only, 2 = draw only, 3 = via read-ahead (2 passes)",
-        "  -b KB      read-ahead memory (default 8192; DOS uses XMS); 0 = stream from disk",
+        "  -b KB      read-ahead memory (default 8192; DOS uses XMS); 0 = stream from disk (.VAN only)",
         "  -v         print display and buffering details on exit",
-        "  -m MODE    DOS: use this VistaPro video mode, e.g. 0x13 or 0x101 (default: the file's)",
+        "  -m MODE    DOS: use this VistaPro video mode, e.g. 0x13 or 0x101 (default: the file's, or the smallest that fits)",
         "  -modes     list the VistaPro video modes, and on DOS which this display has",
         "  -x SCALE   Linux: window scale (default: fit 1280x1024)",
         "  -f         Linux: fullscreen",
@@ -156,7 +189,7 @@ int main(int argc, char **argv)
     const char *path = NULL;
     u32 fps = 10, loops = 0, frame = 0, shown = 0, limit = 0, done_loops = 0, next, budget_kb = 8192;
     u32 t_start, late = 0;
-    int paused = 0, i, k, redraw = 1, bench = -1, verbose = 0;
+    int paused = 0, i, k, redraw = 1, bench = -1, verbose = 0, fps_given = 0;
 
     memset(&o, 0, sizeof(o));
     sys_init(cleanup);
@@ -169,7 +202,7 @@ int main(int argc, char **argv)
             list_modes();
             return 0;
         }
-        if (!strcmp(argv[i], "-r") && i + 1 < argc) fps = strtoul(argv[++i], NULL, 0);
+        if (!strcmp(argv[i], "-r") && i + 1 < argc) { fps = strtoul(argv[++i], NULL, 0); fps_given = 1; }
         else if (!strcmp(argv[i], "-l") && i + 1 < argc) loops = strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "-p")) paused = 1;
         else if (!strcmp(argv[i], "-s") && i + 1 < argc) frame = strtoul(argv[++i], NULL, 0);
@@ -186,7 +219,24 @@ int main(int argc, char **argv)
     }
     if (!path) { usage(); return 2; }
     if (fps < 1) fps = 1;
-    if (van_open(&v, path, err)) {
+    is_flc = flcr_probe(path);
+    if (is_flc) {
+        if (flcr_open(&flc, path, err) || flcr_seek(&flc, 0, err)) {
+            fprintf(stderr, "vanplay: %s\n", err);
+            flcr_close(&flc);
+            return 1;
+        }
+        v.width = flc.width;                      /* what the player needs from the "file" */
+        v.height = flc.height;
+        v.frames = flc.frames;
+        v.video_mode = van_pick_mode(flc.width, flc.height, &k);
+        memcpy(v.palette, flc.pal6, sizeof(v.palette));
+        flc_pal_seen = flc.pal_gen;
+        o.format = flc.fli ? "FLI" : "FLC";
+        if (!fps_given && flc.delay_ms)
+            fps = (1000UL + flc.delay_ms / 2) / flc.delay_ms;
+        if (fps < 1) fps = 1;
+    } else if (van_open(&v, path, err)) {
         fprintf(stderr, "vanplay: %s\n", err);
         return 1;
     }
@@ -196,7 +246,7 @@ int main(int argc, char **argv)
     }
     if (frame >= v.frames)
         frame = v.frames - 1;
-    if (ring_init(&v, budget_kb * 1024UL, err)) {
+    if (!is_flc && ring_init(&v, budget_kb * 1024UL, err)) {
         fprintf(stderr, "vanplay: %s\n", err);
         van_close(&v);
         return 1;
@@ -205,17 +255,22 @@ int main(int argc, char **argv)
         ring_done();
         fprintf(stderr, "vanplay: %s\n", err);
         van_close(&v);
+        flcr_close(&flc);
         return 1;
     }
 
-    sprintf(info, "%.130s; read-ahead %lu of %lu frames in %s%s%.40s; I/O block %u bytes", plat_info(),
-            ring_slots(), v.frames, ring_slots() ? store_kind() : "none", *ring_why() ? " - " : "",
-            ring_why(), v.csize);
+    if (is_flc)
+        sprintf(info, "%.130s; %s decoded as played", plat_info(), flc.fli ? "FLI" : "FLC");
+    else
+        sprintf(info, "%.130s; read-ahead %lu of %lu frames in %s%s%.40s; I/O block %u bytes", plat_info(),
+                ring_slots(), v.frames, ring_slots() ? store_kind() : "none", *ring_why() ? " - " : "",
+                ring_why(), v.csize);
     if (bench >= 0) {
         int rc = benchmark(&v, bench, limit ? limit : v.frames);
         if (verbose)
             puts(info);
         van_close(&v);
+        flcr_close(&flc);
         return rc;
     }
     next = t_start = plat_ms();
@@ -264,6 +319,7 @@ int main(int argc, char **argv)
     t_start = plat_ms() - t_start;
     cleanup();
     van_close(&v);
+    flcr_close(&flc);
     if (verbose) {
         puts(info);
         if (!t_start) t_start = 1;

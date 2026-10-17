@@ -9,12 +9,14 @@ typedef struct {
     int scale;               /* SDL: window scale (0 = auto: largest that fits 1280x1024) */
     int fullscreen;          /* SDL */
     const char *capture;     /* SDL: on exit, save the last presented frame (as rendered) to this BMP */
+    const char *format;      /* what is playing, for the window title (NULL: from the VanFile) */
 } PlayOpts;
 
 enum { KEY_NONE = -1, KEY_QUIT = 1, KEY_PAUSE, KEY_LEFT, KEY_RIGHT, KEY_FASTER, KEY_SLOWER, KEY_HOME };
 
 int  plat_init(VanFile *v, const PlayOpts *o, char *err);   /* set the display up, load the palette */
 void plat_row(void *ctx, u32 y, const unsigned char *row);  /* draw image row y (a van_row_cb) */
+void plat_palette(const unsigned char *pal6);               /* new palette (768 bytes, 6-bit); shown with the next frame */
 void plat_frame_done(u32 frame);                            /* present the frame just drawn */
 int  plat_key(void);                                        /* KEY_* or KEY_NONE, never blocks */
 u32  plat_ms(void);                                         /* monotonic milliseconds */

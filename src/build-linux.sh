@@ -8,7 +8,7 @@ CFLAGS="-O2 -std=c89 -pedantic -Wall -Wextra -Wno-long-long"
 if [ "$TOOLCHAIN" = gcc ]; then
     ${CC:-gcc} $CFLAGS -o vantool vantool.c van.c img.c flc.c sys_posix.c
     if pkg-config --exists sdl2; then
-        ${CC:-gcc} $CFLAGS $(pkg-config --cflags sdl2) -o vanplay vanplay.c play_sdl.c van.c sys_posix.c ring.c store_mem.c $(pkg-config --libs sdl2)
+        ${CC:-gcc} $CFLAGS $(pkg-config --cflags sdl2) -o vanplay vanplay.c play_sdl.c flcread.c van.c sys_posix.c ring.c store_mem.c $(pkg-config --libs sdl2)
     else
         echo "libsdl2-dev not found: skipping vanplay"
     fi
