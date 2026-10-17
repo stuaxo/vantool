@@ -101,6 +101,10 @@ def sdl_tests(files, work):
             _, _, px = read_bmp32(cap)
             ok = compare(v, last, px, 0, 0, 1)
         check(ok, f"{NAME} read-ahead budget {kb} KB: frames {start}..{start + count - 1} (wrapping), last exact")
+    r = subprocess.run([*VANPLAY, "--help"], env=env, capture_output=True, text=True, timeout=60)
+    words = [w for w in ("DOS", "Linux", "Windows", "XMS") if w in r.stdout]
+    check(r.returncode == 0 and "-x SCALE" in r.stdout and "-m MODE" not in r.stdout and not words,
+          f"{NAME} help shows only this system's options" + (f" (mentions {words})" if words else ""))
     r = subprocess.run([*VANPLAY, "-modes"], env=env, capture_output=True, text=True, timeout=60)
     check(r.returncode == 0 and all(m in r.stdout for m in ("0x13", "0x100", "0x101", "0x103", "0x105", "0x107")),
           f"{NAME} -modes lists the VistaPro modes")

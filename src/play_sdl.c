@@ -113,6 +113,17 @@ int plat_key(void)
     return KEY_NONE;
 }
 
+const char *const *plat_help(void)
+{
+    static const char *const text[] = {
+        "  -x SCALE   window scale (default: fit 1280x1024)",
+        "  -f         fullscreen",
+        "  -c OUT.BMP on exit, save the last frame shown, as rendered (for testing)",
+        NULL
+    };
+    return text;
+}
+
 const char *plat_info(void)
 {
     static char s[128];

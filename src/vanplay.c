@@ -147,7 +147,7 @@ static void list_modes(void)
     }
     if (!avail) {
         puts("");
-        puts("-m only applies on DOS. Here the animation is shown in a window of any size.");
+        puts("This display shows an animation in a window of any size, so the mode does not matter here.");
     }
 }
 
@@ -157,7 +157,7 @@ static void usage(void)
         "vanplay " VERSION " - VistaPro VANIM (.VAN) and FLI/FLC animation player",
         "",
         "  vanplay -modes",
-        "  vanplay FILE [-r FPS] [-l LOOPS] [-p] [-s FRAME] [-n COUNT] [-m MODE] [-x SCALE] [-f] [-c OUT.BMP]",
+        "  vanplay FILE [options]",
         "",
         "  -r FPS     frames per second (default 10; for an FLI/FLC, the file's own speed)",
         "  -l LOOPS   play this many times, 0 = forever (default 0)",
@@ -166,20 +166,24 @@ static void usage(void)
         "  -n COUNT   exit after showing COUNT frames (for testing)",
         "  -t WHAT    benchmark: show -n frames (default all) flat out, print fps;",
         "             WHAT 0 = read+draw, 1 = read only, 2 = draw only, 3 = via read-ahead (2 passes)",
-        "  -b KB      read-ahead memory (default 8192; DOS uses XMS); 0 = stream from disk (.VAN only)",
+        "  -b KB      read-ahead memory (default 8192); 0 = stream from disk (.VAN only)",
         "  -v         print display and buffering details on exit",
-        "  -m MODE    DOS: use this VistaPro video mode, e.g. 0x13 or 0x101 (default: the file's, or the smallest that fits)",
-        "  -modes     list the VistaPro video modes, and on DOS which this display has",
-        "  -x SCALE   Linux: window scale (default: fit 1280x1024)",
-        "  -f         Linux: fullscreen",
-        "  -c OUT.BMP Linux: on exit, save the last frame shown, as rendered (for testing)",
+        "  -modes     list the VistaPro video modes",
+        NULL
+    };
+    static const char *const keys[] = {
         "",
         "  keys: Esc/q quit, Space pause, Left/Right step, +/- speed, Home first frame",
         NULL
     };
+    const char *const *own = plat_help();
     int i;
     for (i = 0; text[i]; i++)
         puts(text[i]);
+    for (i = 0; own[i]; i++)                      /* the options only this display has */
+        puts(own[i]);
+    for (i = 0; keys[i]; i++)
+        puts(keys[i]);
 }
 
 int main(int argc, char **argv)

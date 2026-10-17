@@ -436,6 +436,16 @@ void plat_frame_done(u32 frame)
     }
 }
 
+const char *const *plat_help(void)
+{
+    static const char *const text[] = {
+        "  -m MODE    use this VistaPro video mode, e.g. 0x13 or 0x101 (default: the file's,",
+        "             or the smallest that fits); -modes shows which ones this display has",
+        NULL
+    };
+    return text;
+}
+
 int plat_key(void)
 {
     int c;

@@ -5,3 +5,8 @@ void sys_init(void (*on_break)(void))
 {
     (void)on_break;
 }
+
+const char *sys_extract_note(void)
+{
+    return "";
+}

@@ -160,6 +160,10 @@ def make_inputs(work):
 
 
 def linux_tests(work):
+    r = run([*VANTOOL], work)                  # no arguments: usage
+    words = [w for w in ("DOS", "Linux", "Windows") if w in r.stdout]
+    check(r.returncode == 2 and "vantool extract" in r.stdout and not words,
+          f"{NAME} help has no instructions for other systems" + (f" (mentions {words})" if words else ""))
     for name, (w, h), n, var in CASES:
         src = os.path.join(work, name + ".VAN")
         v = VanFile(src)
@@ -221,6 +225,7 @@ def dos_tests(work):
         lines.append(f"VANTOOL slice {name}.VAN {name[:4]}S.VAN 1 2")
         for ext in (".FLC", ".FLI") if (w, h) == (320, 200) else (".FLC",):
             lines.append(f"VANTOOL flc {name}.VAN {name[:6]}{ext} -r 15")
+    lines.append("VANTOOL /? > HELP.TXT")
     lines.append("VANTOOL make PAT.VAN -p A3B%%04d.BMP -n 4 -m 0x13")  # %% for COMMAND.COM
     shutil.copy(os.path.join(work, "A320.VAN"), os.path.join(d, "Long Source Name.van"))
     lines.append('VANTOOL info "Long Source Name.van" > LONGNAME.INF')
@@ -240,6 +245,9 @@ def dos_tests(work):
         lin = run([*VANTOOL, "info", name + ".VAN"], work).stdout.replace("\n", "\r\n")
         dos = open(inf, newline="").read() if inf else ""
         check(dos.split("\r\n")[1:] == lin.split("\r\n")[1:], f"dos info {name} matches {NAME}")
+    hlp = produced.get("HELP.TXT")
+    check(hlp is not None and "keep PREFIX to 4 characters" in open(hlp, errors="replace").read(),
+          "dos help has the DOS-only note")
     inf = produced.get("LONGNAME.INF")
     check(inf is not None and "Long Source Name.van" in open(inf).read(), "dos info reads a long filename")
     out = os.path.join(d, "Long Slice Output.van")
