@@ -1,0 +1,4 @@
+#!/usr/bin/make -f
+# The Makefile lives in src/ and has no install target; debian/install lists the files.
+%:
+	dh $@ --sourcedirectory=src

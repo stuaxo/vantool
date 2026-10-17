@@ -1,0 +1,145 @@
+.TH VANTOOL 1 "October 2026" "vantool" "User Commands"
+.SH NAME
+vantool \- inspect, build, cut, convert and repair VistaPro .VAN animations
+.SH SYNOPSIS
+.B vantool info
+.I FILE.VAN
+.br
+.B vantool extract
+.I FILE.VAN PREFIX
+.RB [ \-t
+.IR bmp | pcx ]
+.RB [ \-f
+.IR FIRST ]
+.RB [ \-n
+.IR COUNT ]
+.br
+.B vantool make
+.I OUT.VAN
+.RB [ \-m
+.IR MODE ]
+.RB [ \-pc ]
+.RB [ \-k ]
+.I IMAGE...
+.br
+.B vantool make
+.I OUT.VAN
+.RB [ \-m
+.IR MODE ]
+.RB [ \-pc ]
+.RB [ \-k ]
+.B \-p
+.I PATTERN
+.B \-n
+.I COUNT
+.RB [ \-s
+.IR START ]
+.br
+.B vantool slice
+.I IN.VAN OUT.VAN FIRST
+.RI [ COUNT ]
+.br
+.B vantool flc
+.I IN.VAN OUT.FLC
+.RB [ \-r
+.IR FPS ]
+.RB [ \-f
+.IR FIRST ]
+.RB [ \-n
+.IR COUNT ]
+.br
+.B vantool repair
+.I FILE.VAN
+.RB [ \-pc ]
+.SH DESCRIPTION
+.B vantool
+works on the VANIM (.VAN) animation files made by VistaPro 3.20 for DOS.
+.SH COMMANDS
+.TP
+.B info
+Print the file's video mode, frame count and other details.
+.TP
+.B extract
+Write each frame as
+.IR PREFIX nnnn .BMP
+or
+.IR PREFIX nnnn .PCX.
+.TP
+.B make
+Build a .VAN file from 8-bit BMP or PCX frames, given either as a list of
+images or as a printf-style
+.I PATTERN
+such as
+.BR FR%04d.PCX .
+.TP
+.B slice
+Copy
+.I COUNT
+frames starting at frame
+.I FIRST
+into a new file.
+Without
+.I COUNT
+the rest of the file is copied.
+.TP
+.B flc
+Convert to an FLC animation.
+An output name ending in
+.B .FLI
+writes the older FLI format instead, which only supports 320x200.
+.TP
+.B repair
+Rewrite the file's magic number in place.
+This fixes VistaPro's "continue" on a VANIMPC file.
+.SH OPTIONS
+.TP
+.BI \-t " bmp" | pcx
+Image format for
+.BR extract .
+.TP
+.BI \-f " FIRST"
+First frame to use.
+.TP
+.BI \-n " COUNT"
+Number of frames to use.
+With
+.B make \-p
+it is the number of frames to read.
+.TP
+.BI \-m " MODE"
+Video mode for
+.BR make ,
+for example
+.B 0x13
+or
+.BR 0x101 .
+The default is chosen from the image size.
+.TP
+.B \-pc
+Write VANIMPC (top-down) instead of VANIMWN, the VistaPro 3.20 default.
+With
+.B repair
+it sets the magic to VANIMPC.
+.TP
+.B \-k
+Keep going if a frame's palette differs, using the first frame's palette.
+.TP
+.BI \-p " PATTERN"
+Printf-style frame name pattern for
+.BR make .
+.TP
+.BI \-s " START"
+First number to substitute into
+.IR PATTERN .
+.TP
+.BI \-r " FPS"
+Playback speed for
+.BR flc ,
+in frames per second.
+The default is 10.
+.SH SEE ALSO
+.BR vanplay (1)
+.PP
+Project page and file format notes:
+.UR https://github.com/stuaxo/vantool
+.UE
