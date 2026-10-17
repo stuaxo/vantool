@@ -32,3 +32,8 @@ void sys_init(void (*on_break)(void))
     signal(SIGINT, on_signal);
     signal(SIGBREAK, on_signal);
 }
+
+const char *sys_extract_note(void)
+{
+    return "keep PREFIX to 4 characters: DOS names are 8.3, and the frame number takes 4";
+}

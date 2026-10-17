@@ -14,12 +14,15 @@ static char err[256];
 
 static void usage(void)
 {
-    static const char *const text[] = {
+    static const char *const head[] = {
         "vantool " VERSION " - VistaPro VANIM (.VAN) animation utility",
         "",
         "  vantool info FILE.VAN",
         "  vantool extract FILE.VAN PREFIX [-t bmp|pcx] [-f FIRST] [-n COUNT]",
-        "      write frames as PREFIXnnnn.BMP/.PCX (keep PREFIX to 4 chars on DOS)",
+        "      write frames as PREFIXnnnn.BMP/.PCX",
+        NULL
+    };
+    static const char *const tail[] = {
         "  vantool make OUT.VAN [-m MODE] [-pc] [-k] IMAGE...",
         "  vantool make OUT.VAN [-m MODE] [-pc] [-k] -p PATTERN -n COUNT [-s START]",
         "      build from 8-bit BMP/PCX frames; PATTERN is printf-style, e.g. FR%04d.PCX",
@@ -35,8 +38,12 @@ static void usage(void)
         NULL
     };
     int i;
-    for (i = 0; text[i]; i++)
-        puts(text[i]);
+    for (i = 0; head[i]; i++)
+        puts(head[i]);
+    if (*sys_extract_note())
+        printf("      %s\n", sys_extract_note());     /* only where this system needs it */
+    for (i = 0; tail[i]; i++)
+        puts(tail[i]);
 }
 
 static int fail(void)

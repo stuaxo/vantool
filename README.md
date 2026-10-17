@@ -9,7 +9,7 @@ The tools build for DOS, Linux and Windows (x86 and amd64).
 Tools:
 
 - `vantool` inspects, extract, build, cuts and repair `.VAN` files.
-- `vanplay` plays them.
+- `vanplay` plays them, and plays FLI and FLC animations too.
 
 Spec:
 
@@ -172,17 +172,20 @@ you can play it with `vanplay`:
 
 
 ```
-vanplay FILE.VAN [options]
+vanplay FILE [options]
 ```
+
+`FILE` can be a `.VAN` file or an FLI or FLC animation, such as one written by `vantool flc` or by
+VistaPro's `VAN2FLC`. `vanplay` tells them apart by what is inside the file, not by its name.
 
 | Option | What it does |
 |---|---|
-| `-r FPS` | frames per second (default 10) |
+| `-r FPS` | frames per second (default 10; an FLI or FLC plays at the speed in its header unless you give this) |
 | `-l LOOPS` | number of times to play the file; 0 means repeat until you stop it (default 0) |
 | `-p` | start paused |
 | `-s FRAME` | start at this frame |
 | `-n COUNT` | stop after showing this many frames |
-| `-b KB` | memory to use for reading frames ahead, in KB (default 8192); 0 reads every frame from disk |
+| `-b KB` | memory to use for reading frames ahead, in KB (default 8192); 0 reads every frame from disk. Not used for FLI and FLC |
 | `-v` | when the player stops, show how the display and memory were set up, and the frame rate achieved |
 | `-t WHAT` | measure speed: 0 read and draw, 1 read only, 2 draw only, 3 through the read-ahead memory |
 | `-m MODE` | DOS only: use this VistaPro video mode, for example `0x13` or `0x101` |
@@ -207,6 +210,14 @@ On Linux and Windows, `vanplay` opens a window at the largest whole-number scale
 pixels.
 
 Colours are converted from the file's 6-bit values the same way a VGA card does.
+
+FLI and FLC files store each frame as the changes from the one before, so `vanplay` decodes them as it plays
+and does not read ahead. Stepping back one frame, or any jump other than to the next frame, decodes again from the
+start, which takes longer in a long animation. The last frame loops back to the first through the ring frame
+that `VAN2FLC` and `vantool flc` add. Only 8-bit animations are supported. An FLC with a palette that
+changes between frames shows each frame in its own palette.
+On DOS an FLI or FLC is shown in the smallest VistaPro mode that fits its size; a size that is not one of those
+modes is centred.
 
 
 ## Getting help on DOS

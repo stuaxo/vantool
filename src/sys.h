@@ -7,4 +7,7 @@
  * write-protect or drive-not-ready fail the call cleanly instead of showing Abort, Retry, Fail?. */
 void sys_init(void (*on_break)(void));
 
+/* Help text that only applies on this system, shown under vantool's "extract" usage; "" if none. */
+const char *sys_extract_note(void);
+
 #endif

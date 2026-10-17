@@ -10,13 +10,13 @@ all: vantool vanplay
 vantool: vantool.o van.o img.o flc.o sys_posix.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-vanplay: vanplay.o play_sdl.o van.o sys_posix.o ring.o store_mem.o
+vanplay: vanplay.o play_sdl.o flcread.o van.o sys_posix.o ring.o store_mem.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(SDL_LIBS)
 
 play_sdl.o: play_sdl.c play.h van.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(SDL_CFLAGS) -c $<
 
-%.o: %.c van.h img.h flc.h play.h sys.h ring.h store.h version.h
+%.o: %.c van.h img.h flc.h flcread.h play.h sys.h ring.h store.h version.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
